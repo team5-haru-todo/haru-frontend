@@ -1,82 +1,50 @@
-# 하루한개 (Haru) - 프론트엔드
+# Welcome to your Expo app 👋
 
-> 하루에 딱 하나만 해도 괜찮아요
+This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
-하루한개(Haru) 앱의 프론트엔드 레포입니다. React Native + Expo로 개발하고 있습니다.
+## Get started
 
-## 기술 스택
+1. Install dependencies
 
-- React Native
-- Expo (SDK 56)
-- TypeScript
+   ```bash
+   npm install
+   ```
 
-## 시작하기
+2. Start the app
 
-### 1. 패키지 설치
+   ```bash
+   npx expo start
+   ```
 
-```bash
-npm install
-```
+In the output, you'll find options to open the app in a
 
-### 2. 앱 실행
+- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
+- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
+- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
+- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
 
-```bash
-npx expo start
-```
+You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
 
-실행하면 터미널에 QR코드가 나타납니다. 핸드폰에 **Expo Go** 앱을 설치한 후 QR코드를 스캔하면 바로 확인할 수 있습니다.
+## Get a fresh project
 
-- iOS: [App Store에서 Expo Go 다운로드](https://apps.apple.com/app/expo-go/id982107779)
-- Android: [Play Store에서 Expo Go 다운로드](https://play.google.com/store/apps/details?id=host.exp.exponent)
-
-## 브랜치 구조
-
-```
-main
-└── develop
-    ├── feature/auth       (사용자·인증·설정)
-    ├── feature/memo       (메모장)
-    ├── feature/main       (메인·완료·스트릭)
-    └── feature/calendar   (캘린더·리포트·알림)
-```
-
-## 작업 방식
-
-1. 각자 본인 담당 `feature` 브랜치에서 작업합니다.
-2. 작업이 끝나면 `develop` 브랜치로 Pull Request를 생성합니다.
-3. `develop`에서 통합 테스트를 마친 후 `main`으로 머지합니다.
-
-## 담당자 및 도메인
-
-| 담당자 | 브랜치 | 도메인 | 작업 화면 |
-|---|---|---|---|
-| 김다은 | `feature/auth` | 사용자·인증·설정 | 로그인, 이용약관 , 마이페이지 |
-| 조아영 | `feature/memo` | 메모장 | 할 일 목록, 추가/수정/삭제 |
-| 최희원 | `feature/main` | 메인·완료·스트릭 | 메인, 오늘의 한 개, 완료, 체크 |
-| 정윤서 | `feature/calendar` | 캘린더·통계·알림 | 캘린더, 날짜 상세, 통계, 알림 |
-
-## 작업 시작 방법
+When you're ready, run:
 
 ```bash
-git clone https://github.com/team5-haru-todo/haru-frontend.git
-cd haru-frontend
-git checkout feature/본인담당브랜치
-npm install
-npx expo start
+npm run reset-project
 ```
 
-## 프로젝트 구조
+This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
 
-이 프로젝트는 파일 기반 라우팅(file-based routing)을 사용합니다. `src/app` 디렉토리 안의 파일을 수정하면서 개발을 시작할 수 있습니다.
+## Learn more
 
-## 일정
+To learn more about developing your project with Expo, look at the following resources:
 
-- 개발 시작: 2026.6.20
-- 1차 개발 완료 및 베타테스트: 2026.6.27
-- 최종 배포: 2026.7.13
+- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
+- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
 
-## 참고 자료
+## Join the community
 
-- [Expo 공식 문서](https://docs.expo.dev/)
-- [Expo Router (파일 기반 라우팅)](https://docs.expo.dev/router/introduction/)
-- [TypeScript 가이드](https://docs.expo.dev/guides/typescript/)
+Join our community of developers creating universal apps.
+
+- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
+- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
