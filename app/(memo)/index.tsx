@@ -1,11 +1,16 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, radius, spacing, typography } from '@/src/constants';
+
+const pinIcon = require('@/assets/images/memo/pin-icon.png');
+const trashIcon = require('@/assets/images/memo/trash-icon.png');
 
 const TOAST_VISIBLE_MS = 3000;
 const TOAST_FADE_MS = 400;
@@ -14,6 +19,7 @@ type Memo = {
   id: string;
   title: string;
   createdAt: number;
+  pinned: boolean;
 };
 
 function formatRelativeDays(createdAt: number) {
@@ -57,11 +63,51 @@ export default function MemoListScreen() {
   const handleSubmitMemo = () => {
     const title = memoText.trim();
     if (title.length > 0) {
-      setMemos((prev) => [{ id: Date.now().toString(), title, createdAt: Date.now() }, ...prev]);
+      setMemos((prev) => [
+        { id: Date.now().toString(), title, createdAt: Date.now(), pinned: false },
+        ...prev,
+      ]);
     }
     setMemoText('');
     setIsAdding(false);
   };
+
+  const handleTogglePin = (id: string) => {
+    setMemos((prev) => prev.map((memo) => (memo.id === id ? { ...memo, pinned: !memo.pinned } : memo)));
+  };
+
+  const handleDeleteMemo = (id: string) => {
+    setMemos((prev) => prev.filter((memo) => memo.id !== id));
+  };
+
+  const pinnedMemos = memos.filter((memo) => memo.pinned);
+  const unpinnedMemos = memos.filter((memo) => !memo.pinned);
+
+  const renderMemoRow = (memo: Memo) => (
+    <Swipeable
+      key={memo.id}
+      overshootRight={false}
+      renderRightActions={() => (
+        <View style={styles.swipeActions}>
+          <Pressable style={styles.pinButton} onPress={() => handleTogglePin(memo.id)}>
+            <Image source={pinIcon} style={styles.actionIcon} contentFit="contain" />
+          </Pressable>
+          <Pressable style={styles.deleteButton} onPress={() => handleDeleteMemo(memo.id)}>
+            <Image source={trashIcon} style={styles.actionIcon} contentFit="contain" />
+          </Pressable>
+        </View>
+      )}>
+      <View style={styles.memoCard}>
+        <View style={styles.memoCardContent}>
+          <Text style={styles.memoCardTitle}>{memo.title}</Text>
+          <Text style={styles.memoCardTime}>{formatRelativeDays(memo.createdAt)}</Text>
+        </View>
+        <Pressable style={styles.challengeButton} onPress={handleChallenge}>
+          <Text style={styles.challengeButtonLabel}>도전</Text>
+        </Pressable>
+      </View>
+    </Swipeable>
+  );
 
   return (
     <View style={styles.root}>
@@ -96,18 +142,15 @@ export default function MemoListScreen() {
             </Text>
           </View>
         ) : (
-          <View style={styles.listWrapper}>
-            {memos.map((memo) => (
-              <View key={memo.id} style={styles.memoCard}>
-                <View style={styles.memoCardContent}>
-                  <Text style={styles.memoCardTitle}>{memo.title}</Text>
-                  <Text style={styles.memoCardTime}>{formatRelativeDays(memo.createdAt)}</Text>
-                </View>
-                <Pressable style={styles.challengeButton} onPress={handleChallenge}>
-                  <Text style={styles.challengeButtonLabel}>도전</Text>
-                </Pressable>
-              </View>
-            ))}
+          <View style={styles.contentInner}>
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>즐겨찾기</Text>
+              {pinnedMemos.map(renderMemoRow)}
+            </View>
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>전체</Text>
+              {unpinnedMemos.map(renderMemoRow)}
+            </View>
           </View>
         )}
       </View>
@@ -167,12 +210,15 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    paddingTop: 16,
+    paddingBottom: 10,
+    paddingHorizontal: 10,
   },
   emptyState: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 10,
+    padding: 10,
   },
   emptyText: {
     ...typography.b3BodyRegular,
@@ -183,6 +229,19 @@ const styles = StyleSheet.create({
     width: '100%',
     padding: 10,
     gap: 12,
+  },
+  contentInner: {
+    flex: 1,
+    gap: 24,
+  },
+  section: {
+    width: '100%',
+    padding: 10,
+    gap: 8,
+  },
+  sectionLabel: {
+    ...typography.c1Caption,
+    color: colors.text.tertiary,
   },
   input: {
     width: '100%',
@@ -200,7 +259,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderRadius: radius.card,
+    borderRadius: radius.button,
     backgroundColor: colors.surface.default,
     paddingHorizontal: 14,
     paddingVertical: 6,
@@ -213,7 +272,7 @@ const styles = StyleSheet.create({
   memoCardContent: {
     flex: 1,
     gap: 2,
-    paddingVertical: 10,
+    padding: 10,
   },
   memoCardTitle: {
     ...typography.b2BodyMedium,
@@ -232,6 +291,32 @@ const styles = StyleSheet.create({
   challengeButtonLabel: {
     ...typography.b4BodySm,
     color: colors.primary.default,
+  },
+  swipeActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingLeft: 8,
+  },
+  pinButton: {
+    width: 74,
+    height: 74,
+    borderRadius: radius.button,
+    backgroundColor: '#E8E9EC',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteButton: {
+    width: 74,
+    height: 74,
+    borderRadius: radius.button,
+    backgroundColor: '#FFDFDF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionIcon: {
+    width: 24,
+    height: 24,
   },
   addButtonWrapper: {
     width: '100%',
