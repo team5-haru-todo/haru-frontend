@@ -20,4 +20,7 @@ export const colors = {
   border: {
     default: '#C2C6D0',
   },
+  button: {
+    disabled: '#E8E9EC',
+  },
 };
