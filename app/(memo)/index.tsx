@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Animated, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { ScrollView, Swipeable } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -35,6 +35,7 @@ export default function MemoListScreen() {
   const [memoText, setMemoText] = useState('');
   const [memos, setMemos] = useState<Memo[]>([]);
   const [toastVisible, setToastVisible] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const toastOpacity = useRef(new Animated.Value(0)).current;
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -77,8 +78,11 @@ export default function MemoListScreen() {
     setMemos((prev) => prev.map((memo) => (memo.id === id ? { ...memo, pinned: !memo.pinned } : memo)));
   };
 
-  const handleDeleteMemo = (id: string) => {
-    setMemos((prev) => prev.filter((memo) => memo.id !== id));
+  const handleConfirmDelete = () => {
+    if (pendingDeleteId !== null) {
+      setMemos((prev) => prev.filter((memo) => memo.id !== pendingDeleteId));
+    }
+    setPendingDeleteId(null);
   };
 
   const pinnedMemos = memos.filter((memo) => memo.pinned);
@@ -97,7 +101,7 @@ export default function MemoListScreen() {
               contentFit="contain"
             />
           </Pressable>
-          <Pressable style={styles.deleteButton} onPress={() => handleDeleteMemo(memo.id)}>
+          <Pressable style={styles.deleteButton} onPress={() => setPendingDeleteId(memo.id)}>
             <Image source={trashIcon} style={styles.actionIcon} contentFit="contain" />
           </Pressable>
         </View>
@@ -188,6 +192,30 @@ export default function MemoListScreen() {
           </LinearGradient>
         </Animated.View>
       )}
+
+      <Modal
+        visible={pendingDeleteId !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPendingDeleteId(null)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modal}>
+            <Image source={trashIcon} style={styles.actionIcon} contentFit="contain" />
+            <View style={styles.modalTextGroup}>
+              <Text style={styles.modalTitle}>이 메모를 삭제할까요?</Text>
+              <Text style={styles.modalSubtitle}>삭제하면 다시 되돌릴 수 없어요</Text>
+            </View>
+            <View style={styles.modalButtons}>
+              <Pressable style={styles.modalCancelButton} onPress={() => setPendingDeleteId(null)}>
+                <Text style={styles.modalCancelLabel}>취소</Text>
+              </Pressable>
+              <Pressable style={styles.modalConfirmButton} onPress={handleConfirmDelete}>
+                <Text style={styles.modalConfirmLabel}>삭제하기</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -380,6 +408,75 @@ const styles = StyleSheet.create({
   },
   toastLabel: {
     ...typography.b4BodySm,
+    color: colors.surface.default,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modal: {
+    width: 291,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 24,
+    borderRadius: radius.card,
+    backgroundColor: colors.surface.default,
+    paddingTop: 30,
+    paddingBottom: 20,
+    paddingHorizontal: 40,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 8,
+  },
+  modalTextGroup: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 20,
+  },
+  modalTitle: {
+    ...typography.b1Subtitle,
+    color: colors.text.primary,
+    textAlign: 'center',
+  },
+  modalSubtitle: {
+    ...typography.b4BodySm,
+    color: colors.text.primary,
+    textAlign: 'center',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    width: '100%',
+  },
+  modalCancelButton: {
+    flex: 1,
+    height: 54,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+  },
+  modalCancelLabel: {
+    ...typography.b2BodyBold,
+    color: colors.text.tertiary,
+  },
+  modalConfirmButton: {
+    flex: 1,
+    height: 54,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    backgroundColor: colors.primary.default,
+  },
+  modalConfirmLabel: {
+    ...typography.b2BodyBold,
     color: colors.surface.default,
   },
 });
