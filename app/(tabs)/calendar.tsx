@@ -403,17 +403,24 @@ const styles = StyleSheet.create({
     borderTopColor: '#15171C',
   },
 
-  // Section_SelectedDay: marginTop=24, px=20, pt=16
+  // Section_SelectedDay: w=390, padding 16px 20px, flex-col, justify-center, align-items flex-end, gap=14
+  // marginTop=24 는 Content_Area gap=24 대응
   selectedSection: {
     marginTop: 24,
+    width: '100%',
+    paddingVertical: 16,
     paddingHorizontal: 20,
-    paddingTop: 16,
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+    gap: 14,
   },
+  // Row_DateHeader: justify-between, align-center, align-self stretch
   dateHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    width: '100%',
+    alignSelf: 'stretch',
   },
   // Row_DateHeader left: Medium 14px, lineHeight 20, #1A1A1A
   dateHeaderText: {
@@ -429,8 +436,8 @@ const styles = StyleSheet.create({
     color: colors.text.tertiary,
     lineHeight: 16,
   },
-  // List_CompletedTasks: gap=8
-  todoList: { marginTop: 14, gap: 8, width: '100%' },
+  // List_CompletedTasks: gap=8, align-self stretch (gap=14 은 selectedSection에서 처리)
+  todoList: { gap: 8, alignSelf: 'stretch' },
   // State (todo): h=48, bg=#E6F4FF, px=14, rounded=8, flex-row, gap=8, items-start
   todoCard: {
     height: 48,
