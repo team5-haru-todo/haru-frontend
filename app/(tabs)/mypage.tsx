@@ -60,10 +60,11 @@ export default function MyPageScreen() {
             <View style={styles.listItem}>
               <Text style={styles.listItemText}>푸쉬알림</Text>
               {/* iOS Toggle: w=51, h=31 */}
+              {/* IOsToggle: h=31, w=51, track #65C466 (Figma 원본 초록) */}
               <Switch
                 value={pushEnabled}
                 onValueChange={setPushEnabled}
-                trackColor={{ false: '#E8E9EC', true: colors.primary.default }}
+                trackColor={{ false: '#E8E9EC', true: '#65C466' }}
                 thumbColor="#FFFFFF"
                 ios_backgroundColor="#E8E9EC"
               />
