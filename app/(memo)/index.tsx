@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radius, spacing, typography } from '@/src/constants';
 
 const pinIcon = require('@/assets/images/memo/pin-icon.png');
+const pinFilledIcon = require('@/assets/images/memo/pin-filled-icon.png');
 const trashIcon = require('@/assets/images/memo/trash-icon.png');
 
 const TOAST_VISIBLE_MS = 3000;
@@ -90,7 +91,11 @@ export default function MemoListScreen() {
       renderRightActions={() => (
         <View style={styles.swipeActions}>
           <Pressable style={styles.pinButton} onPress={() => handleTogglePin(memo.id)}>
-            <Image source={pinIcon} style={styles.actionIcon} contentFit="contain" />
+            <Image
+              source={memo.pinned ? pinFilledIcon : pinIcon}
+              style={styles.actionIcon}
+              contentFit="contain"
+            />
           </Pressable>
           <Pressable style={styles.deleteButton} onPress={() => handleDeleteMemo(memo.id)}>
             <Image source={trashIcon} style={styles.actionIcon} contentFit="contain" />
