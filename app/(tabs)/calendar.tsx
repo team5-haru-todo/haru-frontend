@@ -305,14 +305,15 @@ const styles = StyleSheet.create({
     width: '100%',
   },
 
-  // State cell: flex=1, h=51, flex-col, items-center, py=4, gap=3
+  // State cell: flex=1, h=51, flex-col, items-center, pt=4, gap=3
+  // justifyContent: flex-start so today badge doesn't push circle up
   stateCell: {
     flex: 1,
     height: 51,
     flexDirection: 'column',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 4,
+    justifyContent: 'flex-start',
+    paddingTop: 4,
     gap: 3,
   },
 
