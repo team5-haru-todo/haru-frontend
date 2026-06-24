@@ -303,9 +303,11 @@ const styles = StyleSheet.create({
     width: '100%',
   },
 
-  // Week Row: flex-row (7 cells each flex=1, no gap → each 50px)
+  // Row_Week: display flex, align-items center, align-self stretch
   weekRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'stretch',
     width: '100%',
   },
 
