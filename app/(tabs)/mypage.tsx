@@ -60,19 +60,20 @@ export default function MyPageScreen() {
             <View style={styles.listItem}>
               <Text style={styles.listItemText}>푸쉬알림</Text>
               {/* iOS Toggle: w=51, h=31 */}
-              {/* IOsToggle: h=31, w=51, track #65C466 (Figma 원본 초록) */}
+              {/* IOsToggle: w=51, h=31, borderRadius=16, track #65C466, knob 27x27 */}
               <Switch
                 value={pushEnabled}
                 onValueChange={setPushEnabled}
                 trackColor={{ false: '#E8E9EC', true: '#65C466' }}
                 thumbColor="#FFFFFF"
                 ios_backgroundColor="#E8E9EC"
+                style={{ width: 51, height: 31 }}
               />
             </View>
           </View>
 
-          {/* Section_Support: h=152 */}
-          <View>
+          {/* Section_Support: flex-col, align-items flex-start */}
+          <View style={styles.sectionGroup}>
             <View style={styles.sectionTitle}>
               <Text style={styles.sectionTitleText}>지원</Text>
             </View>
@@ -90,8 +91,8 @@ export default function MyPageScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Section_Version: h=100 */}
-          <View>
+          {/* Section_Version: flex-col, align-items flex-start */}
+          <View style={styles.sectionGroup}>
             <View style={styles.sectionTitle}>
               <Text style={styles.sectionTitleText}>앱 버전 정보</Text>
             </View>
@@ -194,6 +195,13 @@ const styles = StyleSheet.create({
   sectionDivider: { height: 8, backgroundColor: '#F4F5F7', width: '100%' },
 
   settingsList: { width: '100%', backgroundColor: '#FFFFFF' },
+
+  // Section_Support / Section_Version: flex-col, align-items flex-start
+  sectionGroup: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    width: '100%',
+  },
 
   // Section_Title: pt=24, pb=8, pl=20
   sectionTitle: {
