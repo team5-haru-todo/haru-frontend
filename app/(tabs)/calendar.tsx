@@ -391,12 +391,12 @@ const styles = StyleSheet.create({
     lineHeight: 14,
     textAlign: 'center',
   },
-  // Badge_Today_Tail: 4.33x3.75px, 아래 방향 삼각형 ▼
+  // Badge_Today_Tail: SVG 원본 4.33x3.75px → borderLeft/Right 2, borderTop 4
   todayTail: {
     width: 0,
     height: 0,
-    borderLeftWidth: 4,
-    borderRightWidth: 4,
+    borderLeftWidth: 2,
+    borderRightWidth: 2,
     borderTopWidth: 4,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
