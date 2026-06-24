@@ -350,21 +350,24 @@ const styles = StyleSheet.create({
   },
   dayNumActive: { color: colors.text.primary },
 
-  // 오늘 뱃지 컨테이너: 원 위에 절대 위치
+  // TodayBadge 컨테이너: Figma top=-11 (row 기준), 절대 위치
   todayBadgeWrap: {
     position: 'absolute',
-    top: -22,
+    top: -11,
     alignItems: 'center',
     zIndex: 10,
   },
-  // Badge_Today: bg=#15171C, px=6, py=2, rounded=50, w=32
+  // Badge_Today: display flex, padding 2px 6px, justify-center, align-center, gap 10
   todayBadge: {
-    backgroundColor: '#15171C',
+    display: 'flex',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
     paddingHorizontal: 6,
     paddingVertical: 2,
+    backgroundColor: '#15171C',
     borderRadius: 50,
     minWidth: 32,
-    alignItems: 'center',
   },
   todayText: {
     fontSize: 11,
