@@ -22,7 +22,14 @@ export default function TabLayout() {
           height: 88,
           paddingTop: 7,
           paddingBottom: 10,
+          paddingHorizontal: 24,
           position: 'absolute',
+        },
+        tabBarItemStyle: {
+          width: 56,
+          height: 56,
+          paddingTop: 8,
+          paddingBottom: 6,
         },
         tabBarLabelStyle: {
           fontSize: 11,

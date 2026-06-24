@@ -69,15 +69,22 @@ const styles = StyleSheet.create({
     lineHeight: 26,
   },
 
-  // Content_Area: pt=32, px=20
+  // Content_Area: flex-col, items-center, overflow-clip, pt=32, px=20
   contentArea: {
     flex: 1,
+    flexDirection: 'column',
+    alignItems: 'center',
     paddingTop: 32,
     paddingHorizontal: 20,
+    overflow: 'hidden',
   },
 
-  // Group_Terms > Term_List
-  termList: { width: '100%' },
+  // Group_Terms > Term_List: flex-col, items-start, w=full
+  termList: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    width: '100%',
+  },
 
   // List_Item: h=44, gap=8, items-center
   listItem: {

@@ -234,10 +234,6 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     letterSpacing: -0.5,
     lineHeight: 26,
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    textAlign: 'center',
   },
 
   // Card_AchieveSummary: gap=12, px=16, py=12, items-center, justify-center
@@ -276,14 +272,14 @@ const styles = StyleSheet.create({
   // 분리선: w=0.5, h=100, #E0E0E0
   statDivider: { width: 0.5, height: 100, backgroundColor: '#E0E0E0' },
 
-  // Calendar_Section: flex-col, gap=21, items-center, px=20, py=30
+  // Calendar_Section: flex-col, gap=21, items-center, px=20, py=30, align-self=stretch
   calSection: {
     flexDirection: 'column',
     gap: 21,
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 30,
-    width: '100%',
+    alignSelf: 'stretch',
   },
 
   // WeekdayHeader: flex-row, gap=10, items-center, justify-center, text-center
@@ -303,13 +299,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // Calendar_Grid: flex-col, gap=10, items-center, justify-center
+  // Calendar_Grid: flex-col, gap=10, items-center, justify-center, align-self=stretch
   calGrid: {
     flexDirection: 'column',
     gap: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    width: '100%',
+    alignSelf: 'stretch',
   },
 
   // Row_Week: flex, items-center, align-self stretch
@@ -317,7 +313,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'stretch',
-    width: '100%',
   },
 
   // State (DateCell): flex-col, gap=3, items-center, justify-center, py=4
@@ -436,20 +431,26 @@ const styles = StyleSheet.create({
     color: colors.text.tertiary,
     lineHeight: 16,
   },
-  // List_CompletedTasks: gap=8, align-self stretch (gap=14 은 selectedSection에서 처리)
-  todoList: { gap: 8, alignSelf: 'stretch' },
-  // State (todo): h=48, bg=#E6F4FF, px=14, rounded=8, flex-row, gap=8, items-start
+  // List_CompletedTasks: flex-col, gap=8, align-self stretch, items-start
+  todoList: {
+    flexDirection: 'column',
+    gap: 8,
+    alignSelf: 'stretch',
+    alignItems: 'flex-start',
+  },
+  // State (todo): bg=#E6F4FF, px=14, py=12, rounded=8, flex-row, gap=8, items-start, align-self stretch
+  // height NOT explicit — determined by content (py=12+lineHeight24+py=12=48)
   todoCard: {
-    height: 48,
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 8,
     backgroundColor: '#E6F4FF',
     paddingHorizontal: 14,
+    paddingVertical: 12,
     borderRadius: 8,
-    width: '100%',
+    alignSelf: 'stretch',
   },
-  // Todo text: Regular 16px, lineHeight 24, #259BFF, line-through, flex=1
+  // Todo text: flex=1, Regular 16px, lineHeight 24, #259BFF, line-through, text-center
   todoText: {
     flex: 1,
     fontSize: 16,
@@ -457,6 +458,7 @@ const styles = StyleSheet.create({
     color: '#259BFF',
     lineHeight: 24,
     textDecorationLine: 'line-through',
+    textAlign: 'center',
   },
   // Component 2: 24x24, bg=#259BFF, rounded=12
   todoCheck: {

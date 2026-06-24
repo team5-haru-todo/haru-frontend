@@ -125,8 +125,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     width: '100%',
   },
-  // NavBar title: SemiBold 18px, lineHeight 26, letterSpacing -0.5
+  // NavBar title: SemiBold 18px, lineHeight 26, letterSpacing -0.5, absolute centered
   navTitle: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    textAlign: 'center',
     fontSize: 18,
     fontFamily: 'Pretendard-SemiBold',
     color: colors.text.primary,
@@ -203,11 +207,14 @@ const styles = StyleSheet.create({
     width: '100%',
   },
 
-  // Section_Title: pt=24, pb=8, pl=20
+  // Section_Title: bg=white, flex, items-center, justify-center, pb=8, pt=24, px=20
   sectionTitle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingTop: 24,
     paddingBottom: 8,
-    paddingLeft: 20,
+    paddingHorizontal: 20,
     backgroundColor: '#FFFFFF',
     width: '100%',
   },

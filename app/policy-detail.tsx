@@ -132,6 +132,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   navTitle: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    textAlign: 'center',
     fontSize: 18,
     fontFamily: 'Pretendard-SemiBold',
     color: colors.text.primary,
