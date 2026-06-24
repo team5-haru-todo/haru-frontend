@@ -18,61 +18,61 @@ export default function MyPageScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* NavBar — h=56, border-bottom 2px #F7F7F7, title centered */}
+        {/* NavBar: h=56, "설정" 절대 가운데, border-bottom 2px #F7F7F7 */}
         <View style={styles.navBar}>
           <Text style={styles.navTitle}>설정</Text>
         </View>
 
-        {/* Profile_Area — px=20, py=24, border-bottom 1px #E8E9EC, items-start */}
+        {/* Profile_Area: px=20, py=24, border-bottom 1px #E8E9EC, items-start justify-between */}
         <View style={styles.profileArea}>
+          {/* Profile_Left: gap=12, items-center */}
           <View style={styles.profileLeft}>
-            {/* Avatar — 74x74 */}
+            {/* Avatar: 74x74 */}
             <View style={styles.avatar} />
-            {/* Profile text group — gap=4 */}
+            {/* Group_ProfileText: gap=4 */}
             <View style={styles.profileTexts}>
               <Text style={styles.profileName}>김다은</Text>
               <Text style={styles.profileEmail}>Groom12@kakao.com</Text>
               <Text style={styles.profileAccount}>카카오 계정 연결됨</Text>
             </View>
           </View>
-          {/* Btn_Account — border #C2C6D0, rounded=16, px=12, py=4 */}
+          {/* Btn_Account: border 1px #C2C6D0, rounded=16, px=12, py=4 */}
           <TouchableOpacity style={styles.accountBtn} activeOpacity={0.7}>
             <Text style={styles.accountBtnText}>계정 관리</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Divider_Section — h=8, #F4F5F7 */}
+        {/* Divider_Section: h=8, #F4F5F7 */}
         <View style={styles.sectionDivider} />
 
         {/* Settings_List */}
         <View style={styles.settingsList}>
 
-          {/* Section_Notification */}
-          <View style={styles.sectionGroup}>
-            {/* Section_Title — pb=8, pt=24, px=20 */}
-            <View style={styles.sectionTitleWrap}>
+          {/* Section_Notification: h=100 */}
+          <View>
+            {/* Section_Title: pt=24, pb=8, pl=20 */}
+            <View style={styles.sectionTitle}>
               <Text style={styles.sectionTitleText}>알림</Text>
             </View>
-            {/* List_Item — h=52, px=20 */}
+            {/* List_Item: h=52, px=20, justify-between */}
             <View style={styles.listItem}>
               <Text style={styles.listItemText}>푸쉬알림</Text>
-              {/* IOsToggle — h=31, w=51 */}
+              {/* iOS Toggle: w=51, h=31 */}
               <Switch
                 value={pushEnabled}
                 onValueChange={setPushEnabled}
                 trackColor={{ false: '#E8E9EC', true: colors.primary.default }}
                 thumbColor="#FFFFFF"
                 ios_backgroundColor="#E8E9EC"
-                style={styles.toggle}
               />
             </View>
           </View>
 
-          {/* Section_Support */}
-          <View style={styles.sectionGroup}>
-            <View style={styles.sectionTitleWrap}>
+          {/* Section_Support: h=152 */}
+          <View>
+            <View style={styles.sectionTitle}>
               <Text style={styles.sectionTitleText}>지원</Text>
             </View>
             <TouchableOpacity style={styles.listItem} activeOpacity={0.7}>
@@ -89,9 +89,9 @@ export default function MyPageScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Section_Version */}
-          <View style={styles.sectionGroup}>
-            <View style={styles.sectionTitleWrap}>
+          {/* Section_Version: h=100 */}
+          <View>
+            <View style={styles.sectionTitle}>
               <Text style={styles.sectionTitleText}>앱 버전 정보</Text>
             </View>
             <View style={styles.listItem}>
@@ -108,9 +108,9 @@ export default function MyPageScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
-  scrollContent: { paddingBottom: 96 },
+  scroll: { paddingBottom: 96 },
 
-  // NavBar: h=56, border-bottom 2px #F7F7F7, px=20, py=14
+  // NavBar: h=56, border-bottom 2px #F7F7F7, title absolutely centered
   navBar: {
     height: 56,
     flexDirection: 'row',
@@ -121,7 +121,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     borderBottomColor: '#F7F7F7',
     backgroundColor: '#FFFFFF',
+    width: '100%',
   },
+  // NavBar title: SemiBold 18px, lineHeight 26, letterSpacing -0.5
   navTitle: {
     fontSize: 18,
     fontFamily: 'Pretendard-SemiBold',
@@ -140,17 +142,15 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E8E9EC',
     backgroundColor: '#FFFFFF',
+    width: '100%',
   },
+  // Profile_Left: gap=12, items-center
   profileLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   // Avatar: 74x74
-  avatar: {
-    width: 74,
-    height: 74,
-    borderRadius: 37,
-    backgroundColor: '#D9D9D9',
-  },
-  // Profile text group: gap=4
-  profileTexts: { flexDirection: 'column', gap: 4 },
+  avatar: { width: 74, height: 74, borderRadius: 37, backgroundColor: '#D9D9D9' },
+  // Group_ProfileText: gap=4
+  profileTexts: { gap: 4 },
+  // Name: SemiBold 18px, lineHeight 26, letterSpacing -0.5
   profileName: {
     fontSize: 18,
     fontFamily: 'Pretendard-SemiBold',
@@ -158,19 +158,21 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
     lineHeight: 26,
   },
+  // Email: Medium 14px, lineHeight 20, secondary
   profileEmail: {
     fontSize: 14,
     fontFamily: 'Pretendard-Medium',
     color: colors.text.secondary,
     lineHeight: 20,
   },
+  // Account: Medium 14px, lineHeight 20, tertiary
   profileAccount: {
     fontSize: 14,
     fontFamily: 'Pretendard-Medium',
     color: colors.text.tertiary,
     lineHeight: 20,
   },
-  // Btn_Account: border #C2C6D0, rounded=16, px=12, py=4
+  // Btn_Account: border 1px #C2C6D0, rounded=16, px=12, py=4
   accountBtn: {
     borderWidth: 1,
     borderColor: '#C2C6D0',
@@ -179,6 +181,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     backgroundColor: '#FFFFFF',
   },
+  // Button text: Medium 12px, lineHeight 16, secondary
   accountBtnText: {
     fontSize: 12,
     fontFamily: 'Pretendard-Medium',
@@ -187,20 +190,17 @@ const styles = StyleSheet.create({
   },
 
   // Divider_Section: h=8, #F4F5F7
-  sectionDivider: { height: 8, backgroundColor: '#F4F5F7' },
+  sectionDivider: { height: 8, backgroundColor: '#F4F5F7', width: '100%' },
 
-  settingsList: { backgroundColor: '#FFFFFF' },
+  settingsList: { width: '100%', backgroundColor: '#FFFFFF' },
 
-  sectionGroup: { flexDirection: 'column' },
-
-  // Section_Title container: pb=8, pt=24, px=20, items-center, justify-center
-  sectionTitleWrap: {
+  // Section_Title: pt=24, pb=8, pl=20
+  sectionTitle: {
     paddingTop: 24,
     paddingBottom: 8,
-    paddingHorizontal: 20,
-    alignItems: 'flex-start',
-    justifyContent: 'center',
+    paddingLeft: 20,
     backgroundColor: '#FFFFFF',
+    width: '100%',
   },
   // Section title text: Medium 12px, lineHeight 16, tertiary
   sectionTitleText: {
@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
 
-  // List_Item: h=52, px=20, justify-between, items-center
+  // List_Item: h=52, px=20, flex-row, items-center, justify-between
   listItem: {
     height: 52,
     flexDirection: 'row',
@@ -218,6 +218,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     backgroundColor: '#FFFFFF',
+    width: '100%',
   },
   // List item text: Regular 16px, lineHeight 24, text-primary
   listItemText: {
@@ -226,8 +227,6 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     lineHeight: 24,
   },
-  // IOsToggle dimensions match Figma: h=31, w=51
-  toggle: { transform: [{ scaleX: 0.9 }, { scaleY: 0.9 }] },
   // Version right text: Regular 11px, lineHeight 14, tertiary
   versionText: {
     fontSize: 11,
