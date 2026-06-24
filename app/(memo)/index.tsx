@@ -1,13 +1,67 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, radius, spacing, typography } from '@/src/constants';
 
+const TOAST_VISIBLE_MS = 3000;
+const TOAST_FADE_MS = 400;
+
+type Memo = {
+  id: string;
+  title: string;
+  createdAt: number;
+};
+
+function formatRelativeDays(createdAt: number) {
+  const days = Math.floor((Date.now() - createdAt) / (1000 * 60 * 60 * 24));
+  return days <= 0 ? '오늘' : `${days}일 전`;
+}
+
 export default function MemoListScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const [isAdding, setIsAdding] = useState(false);
+  const [memoText, setMemoText] = useState('');
+  const [memos, setMemos] = useState<Memo[]>([]);
+  const [toastVisible, setToastVisible] = useState(false);
+  const toastOpacity = useRef(new Animated.Value(0)).current;
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleChallenge = () => {
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+    setToastVisible(true);
+    toastOpacity.setValue(1);
+    toastTimeoutRef.current = setTimeout(() => {
+      Animated.timing(toastOpacity, {
+        toValue: 0,
+        duration: TOAST_FADE_MS,
+        useNativeDriver: true,
+      }).start(() => setToastVisible(false));
+    }, TOAST_VISIBLE_MS);
+  };
+
+  const handleSubmitMemo = () => {
+    const title = memoText.trim();
+    if (title.length > 0) {
+      setMemos((prev) => [{ id: Date.now().toString(), title, createdAt: Date.now() }, ...prev]);
+    }
+    setMemoText('');
+    setIsAdding(false);
+  };
 
   return (
     <View style={styles.root}>
@@ -21,19 +75,68 @@ export default function MemoListScreen() {
       </View>
 
       <View style={styles.content}>
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>
-            아직 적어둔 할 일이 없어요{'\n'}편하게 적어두고 나중에 꺼내 보세요 🌱
-          </Text>
-        </View>
+        {isAdding ? (
+          <View style={styles.listWrapper}>
+            <TextInput
+              style={styles.input}
+              value={memoText}
+              onChangeText={setMemoText}
+              onSubmitEditing={handleSubmitMemo}
+              returnKeyType="done"
+              placeholder="할 일을 적어보세요"
+              placeholderTextColor={colors.text.placeholder}
+              cursorColor={colors.primary.default}
+              autoFocus
+            />
+          </View>
+        ) : memos.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>
+              아직 적어둔 할 일이 없어요{'\n'}편하게 적어두고 나중에 꺼내 보세요 🌱
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.listWrapper}>
+            {memos.map((memo) => (
+              <View key={memo.id} style={styles.memoCard}>
+                <View style={styles.memoCardContent}>
+                  <Text style={styles.memoCardTitle}>{memo.title}</Text>
+                  <Text style={styles.memoCardTime}>{formatRelativeDays(memo.createdAt)}</Text>
+                </View>
+                <Pressable style={styles.challengeButton} onPress={handleChallenge}>
+                  <Text style={styles.challengeButtonLabel}>도전</Text>
+                </Pressable>
+              </View>
+            ))}
+          </View>
+        )}
       </View>
 
-      <View style={[styles.addButtonWrapper, { paddingBottom: insets.bottom }]}>
-        <Pressable style={styles.addButton} onPress={() => {}}>
-          <Ionicons name="add-circle" size={24} color={colors.primary.default} />
-          <Text style={styles.addButtonLabel}>할 일 추가</Text>
-        </Pressable>
-      </View>
+      {!isAdding && (
+        <View style={[styles.addButtonWrapper, { paddingBottom: insets.bottom }]}>
+          <Pressable style={styles.addButton} onPress={() => setIsAdding(true)}>
+            <Ionicons name="add-circle" size={24} color={colors.primary.default} />
+            <Text style={styles.addButtonLabel}>할 일 추가</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {toastVisible && (
+        <Animated.View
+          style={[styles.toastWrapper, { bottom: insets.bottom + 106, opacity: toastOpacity }]}
+          pointerEvents="none">
+          <LinearGradient
+            colors={['#52565F', '#8A8E99']}
+            start={{ x: 0, y: 1 }}
+            end={{ x: 0, y: 0 }}
+            style={styles.toast}>
+            <View style={styles.toastCheckIcon}>
+              <Ionicons name="checkmark" size={14} color={colors.surface.default} />
+            </View>
+            <Text style={styles.toastLabel}>오늘의 한개로 설정했어요</Text>
+          </LinearGradient>
+        </Animated.View>
+      )}
     </View>
   );
 }
@@ -76,6 +179,60 @@ const styles = StyleSheet.create({
     color: colors.text.tertiary,
     textAlign: 'center',
   },
+  listWrapper: {
+    width: '100%',
+    padding: 10,
+    gap: 12,
+  },
+  input: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: colors.primary.default,
+    borderRadius: radius.button,
+    backgroundColor: colors.surface.default,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    ...typography.b3BodyRegular,
+    color: colors.text.primary,
+  },
+  memoCard: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: radius.card,
+    backgroundColor: colors.surface.default,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  memoCardContent: {
+    flex: 1,
+    gap: 2,
+    paddingVertical: 10,
+  },
+  memoCardTitle: {
+    ...typography.b2BodyMedium,
+    color: colors.text.primary,
+  },
+  memoCardTime: {
+    ...typography.c1Caption,
+    color: colors.text.tertiary,
+  },
+  challengeButton: {
+    borderRadius: radius.pill,
+    backgroundColor: colors.primary.light,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  challengeButtonLabel: {
+    ...typography.b4BodySm,
+    color: colors.primary.default,
+  },
   addButtonWrapper: {
     width: '100%',
     alignItems: 'center',
@@ -103,5 +260,31 @@ const styles = StyleSheet.create({
   addButtonLabel: {
     ...typography.b3BodyRegular,
     color: colors.text.secondary,
+  },
+  toastWrapper: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  toast: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: radius.button,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  toastCheckIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primary.default,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  toastLabel: {
+    ...typography.b4BodySm,
+    color: colors.surface.default,
   },
 });
