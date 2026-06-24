@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Swipeable } from 'react-native-gesture-handler';
+import { ScrollView, Swipeable } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, radius, spacing, typography } from '@/src/constants';
@@ -142,7 +142,10 @@ export default function MemoListScreen() {
             </Text>
           </View>
         ) : (
-          <View style={styles.contentInner}>
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}>
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>즐겨찾기</Text>
               {pinnedMemos.map(renderMemoRow)}
@@ -151,7 +154,7 @@ export default function MemoListScreen() {
               <Text style={styles.sectionLabel}>전체</Text>
               {unpinnedMemos.map(renderMemoRow)}
             </View>
-          </View>
+          </ScrollView>
         )}
       </View>
 
@@ -230,8 +233,10 @@ const styles = StyleSheet.create({
     padding: 10,
     gap: 12,
   },
-  contentInner: {
+  scroll: {
     flex: 1,
+  },
+  scrollContent: {
     gap: 24,
   },
   section: {
