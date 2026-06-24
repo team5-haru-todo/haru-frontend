@@ -140,6 +140,16 @@ export default function CalendarScreen() {
                       onPress={() => setSelectedDay(selected ? null : day)}
                       activeOpacity={0.7}
                     >
+                      {/* 오늘 뱃지: 원 위에 말풍선 형태로 절대 위치 */}
+                      {todayDay && (
+                        <View style={styles.todayBadgeWrap}>
+                          <View style={styles.todayBadge}>
+                            <Text style={styles.todayText}>오늘</Text>
+                          </View>
+                          {/* Badge_Today_Tail: 아래를 가리키는 삼각형 */}
+                          <View style={styles.todayTail} />
+                        </View>
+                      )}
                       {/* 체크 원: outer 24px, inner circle */}
                       <View style={styles.checkOuter}>
                         <View style={[
@@ -160,12 +170,6 @@ export default function CalendarScreen() {
                       ]}>
                         {day}
                       </Text>
-                      {/* 오늘 뱃지 */}
-                      {todayDay && (
-                        <View style={styles.todayBadge}>
-                          <Text style={styles.todayText}>오늘</Text>
-                        </View>
-                      )}
                     </TouchableOpacity>
                   );
                 })}
@@ -346,12 +350,21 @@ const styles = StyleSheet.create({
   },
   dayNumActive: { color: colors.text.primary },
 
-  // 오늘 뱃지: bg=#15171C, px=6, py=2, rounded=50, Regular 11px white
+  // 오늘 뱃지 컨테이너: 원 위에 절대 위치
+  todayBadgeWrap: {
+    position: 'absolute',
+    top: -22,
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  // Badge_Today: bg=#15171C, px=6, py=2, rounded=50, w=32
   todayBadge: {
     backgroundColor: '#15171C',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 50,
+    minWidth: 32,
+    alignItems: 'center',
   },
   todayText: {
     fontSize: 11,
@@ -359,6 +372,17 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     lineHeight: 14,
     textAlign: 'center',
+  },
+  // Badge_Today_Tail: 4.33x3.75px 아래를 향한 삼각형
+  todayTail: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 4,
+    borderRightWidth: 4,
+    borderTopWidth: 4,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: '#15171C',
   },
 
   // Section_SelectedDay: marginTop=24, px=20, pt=16
