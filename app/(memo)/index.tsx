@@ -36,6 +36,8 @@ export default function MemoListScreen() {
   const [memos, setMemos] = useState<Memo[]>([]);
   const [toastVisible, setToastVisible] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
   const toastOpacity = useRef(new Animated.Value(0)).current;
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -85,6 +87,20 @@ export default function MemoListScreen() {
     setPendingDeleteId(null);
   };
 
+  const startEditing = (memo: Memo) => {
+    setEditingId(memo.id);
+    setEditText(memo.title);
+  };
+
+  const handleSubmitEdit = () => {
+    const title = editText.trim();
+    if (title.length > 0 && editingId !== null) {
+      setMemos((prev) => prev.map((memo) => (memo.id === editingId ? { ...memo, title } : memo)));
+    }
+    setEditingId(null);
+    setEditText('');
+  };
+
   const pinnedMemos = memos.filter((memo) => memo.pinned);
   const unpinnedMemos = memos.filter((memo) => !memo.pinned);
 
@@ -102,35 +118,52 @@ export default function MemoListScreen() {
     />
   );
 
-  const renderMemoRow = (memo: Memo) => (
-    <Swipeable
-      key={memo.id}
-      overshootRight={false}
-      renderRightActions={() => (
-        <View style={styles.swipeActions}>
-          <Pressable style={styles.pinButton} onPress={() => handleTogglePin(memo.id)}>
-            <Image
-              source={memo.pinned ? pinFilledIcon : pinIcon}
-              style={styles.actionIcon}
-              contentFit="contain"
-            />
+  const renderMemoRow = (memo: Memo) => {
+    if (editingId === memo.id) {
+      return (
+        <TextInput
+          key={memo.id}
+          style={styles.input}
+          value={editText}
+          onChangeText={setEditText}
+          onSubmitEditing={handleSubmitEdit}
+          onBlur={handleSubmitEdit}
+          returnKeyType="done"
+          cursorColor={colors.primary.default}
+          autoFocus
+        />
+      );
+    }
+    return (
+      <Swipeable
+        key={memo.id}
+        overshootRight={false}
+        renderRightActions={() => (
+          <View style={styles.swipeActions}>
+            <Pressable style={styles.pinButton} onPress={() => handleTogglePin(memo.id)}>
+              <Image
+                source={memo.pinned ? pinFilledIcon : pinIcon}
+                style={styles.actionIcon}
+                contentFit="contain"
+              />
+            </Pressable>
+            <Pressable style={styles.deleteButton} onPress={() => setPendingDeleteId(memo.id)}>
+              <Image source={trashIcon} style={styles.actionIcon} contentFit="contain" />
+            </Pressable>
+          </View>
+        )}>
+        <Pressable style={styles.memoCard} onPress={() => startEditing(memo)}>
+          <View style={styles.memoCardContent}>
+            <Text style={styles.memoCardTitle}>{memo.title}</Text>
+            <Text style={styles.memoCardTime}>{formatRelativeDays(memo.createdAt)}</Text>
+          </View>
+          <Pressable style={styles.challengeButton} onPress={handleChallenge}>
+            <Text style={styles.challengeButtonLabel}>도전</Text>
           </Pressable>
-          <Pressable style={styles.deleteButton} onPress={() => setPendingDeleteId(memo.id)}>
-            <Image source={trashIcon} style={styles.actionIcon} contentFit="contain" />
-          </Pressable>
-        </View>
-      )}>
-      <View style={styles.memoCard}>
-        <View style={styles.memoCardContent}>
-          <Text style={styles.memoCardTitle}>{memo.title}</Text>
-          <Text style={styles.memoCardTime}>{formatRelativeDays(memo.createdAt)}</Text>
-        </View>
-        <Pressable style={styles.challengeButton} onPress={handleChallenge}>
-          <Text style={styles.challengeButtonLabel}>도전</Text>
         </Pressable>
-      </View>
-    </Swipeable>
-  );
+      </Swipeable>
+    );
+  };
 
   return (
     <View style={styles.root}>
