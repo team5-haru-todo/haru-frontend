@@ -17,6 +17,7 @@ import { CheckButton } from '@/src/components/main/CheckButton';
 import { StreakBadge } from '@/src/components/main/StreakBadge';
 import { CompletionCelebration } from '@/src/components/main/CompletionCelebration';
 import { CompletionMessage } from '@/src/components/main/CompletionMessage';
+import { NotificationPermissionModal } from '@/src/components/main/NotificationPermissionModal';
 
 type MainState = 'empty' | 'selected' | 'editing' | 'celebrating' | 'completed';
 
@@ -27,6 +28,8 @@ const DUMMY_COMPLETED_DAYS = [true, true, true, false, false, false, false];
 
 
 export default function MainScreen() {
+  // TODO: 백엔드 user 도메인에서 신규 사용자 여부 확인 후 초기값 교체
+  const [showNotificationModal, setShowNotificationModal] = useState(true);
   const [mainState, setMainState] = useState<MainState>('empty');
   const [taskContent, setTaskContent] = useState('');
   const [editingText, setEditingText] = useState('');
@@ -73,6 +76,17 @@ export default function MainScreen() {
 
   const handleExtra = () => {
     // TODO: 추가 완료 화면 라우팅 연결
+  };
+
+  const handleSkipNotification = () => {
+    setShowNotificationModal(false);
+  };
+
+  const handleAgreeNotification = () => {
+    // TODO: 알림 권한 요청 (expo-notifications requestPermissionsAsync)
+    // TODO: 기기 토큰 등록 API 연결 (notification 도메인 POST /device-tokens)
+    // TODO: 사용자 알림 설정 저장 (user 도메인 PATCH /users/settings)
+    setShowNotificationModal(false);
   };
 
   return (
@@ -144,6 +158,11 @@ export default function MainScreen() {
         </View>
       </KeyboardAvoidingView>
       </SafeAreaView>
+      <NotificationPermissionModal
+        visible={showNotificationModal}
+        onSkip={handleSkipNotification}
+        onAgree={handleAgreeNotification}
+      />
     </LinearGradient>
   );
 }
