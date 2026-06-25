@@ -88,6 +88,20 @@ export default function MemoListScreen() {
   const pinnedMemos = memos.filter((memo) => memo.pinned);
   const unpinnedMemos = memos.filter((memo) => !memo.pinned);
 
+  const renderInput = () => (
+    <TextInput
+      style={styles.input}
+      value={memoText}
+      onChangeText={setMemoText}
+      onSubmitEditing={handleSubmitMemo}
+      returnKeyType="done"
+      placeholder="할 일을 적어보세요"
+      placeholderTextColor={colors.text.placeholder}
+      cursorColor={colors.primary.default}
+      autoFocus
+    />
+  );
+
   const renderMemoRow = (memo: Memo) => (
     <Swipeable
       key={memo.id}
@@ -130,20 +144,8 @@ export default function MemoListScreen() {
       </View>
 
       <View style={styles.content}>
-        {isAdding ? (
-          <View style={styles.listWrapper}>
-            <TextInput
-              style={styles.input}
-              value={memoText}
-              onChangeText={setMemoText}
-              onSubmitEditing={handleSubmitMemo}
-              returnKeyType="done"
-              placeholder="할 일을 적어보세요"
-              placeholderTextColor={colors.text.placeholder}
-              cursorColor={colors.primary.default}
-              autoFocus
-            />
-          </View>
+        {isAdding && memos.length === 0 ? (
+          <View style={styles.listWrapper}>{renderInput()}</View>
         ) : memos.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>
@@ -161,13 +163,14 @@ export default function MemoListScreen() {
             </View>
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>전체</Text>
+              {isAdding && renderInput()}
               {unpinnedMemos.map(renderMemoRow)}
             </View>
           </ScrollView>
         )}
       </View>
 
-      {!isAdding && (
+      {!(isAdding && memos.length === 0) && (
         <View style={[styles.addButtonWrapper, { paddingBottom: insets.bottom }]}>
           <Pressable style={styles.addButton} onPress={() => setIsAdding(true)}>
             <Ionicons name="add-circle" size={24} color={colors.primary.default} />
