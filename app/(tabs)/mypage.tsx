@@ -50,8 +50,8 @@ export default function MyPageScreen() {
         {/* Settings_List */}
         <View style={styles.settingsList}>
 
-          {/* Section_Notification: h=100 */}
-          <View>
+          {/* Section_Notification: flex-col, align-items flex-start */}
+          <View style={styles.sectionGroup}>
             {/* Section_Title: pt=24, pb=8, pl=20 */}
             <View style={styles.sectionTitle}>
               <Text style={styles.sectionTitleText}>알림</Text>
@@ -199,7 +199,13 @@ const styles = StyleSheet.create({
   // Divider_Section: h=8, #F4F5F7
   sectionDivider: { height: 8, backgroundColor: '#F4F5F7', width: '100%' },
 
-  settingsList: { width: '100%', backgroundColor: '#FFFFFF' },
+  // Settings_List: flex-col, items-start, overflow-clip, w=390, bg=white
+  settingsList: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+  },
 
   // Section_Support / Section_Version: flex-col, align-items flex-start
   sectionGroup: {
@@ -208,11 +214,12 @@ const styles = StyleSheet.create({
     width: '100%',
   },
 
-  // Section_Title: bg=white, flex, items-center, justify-center, pb=8, pt=24, px=20
+  // Section_Title: bg=white, flex, items-center, pb=8, pt=24, px=20
+  // Figma는 좁은 컨테이너에서 justify-center 사용 → RN 전체 너비에서는 flex-start로 좌측 정렬
   sectionTitle: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     paddingTop: 24,
     paddingBottom: 8,
     paddingHorizontal: 20,

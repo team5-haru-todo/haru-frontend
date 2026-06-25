@@ -327,6 +327,7 @@ const styles = StyleSheet.create({
 
   // State (DateCell): flex-col, gap=3, items-center, justify-center, py=4
   // flex-[1_0_0] min-w-px — no explicit height, determined by content
+  // State: flex=1, flex-col, justify-center, items-center, gap=3, padding: 4px 0
   stateCell: {
     flex: 1,
     flexDirection: 'column',
@@ -334,7 +335,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 4,
     gap: 3,
-    position: 'relative',
   },
 
   // Ic_Check_Cal / Ip: outer size=24, inner inset=8.33% (2px), rounded=50px
