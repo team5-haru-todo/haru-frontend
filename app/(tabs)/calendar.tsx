@@ -110,7 +110,8 @@ export default function CalendarScreen() {
           </View>
         </View>
 
-        {/* Calendar_Section: flex-col gap=21, items-center, px=20, py=30 */}
+        {/* Calendar_Section: flex-col gap=21, items-center, px=20, py=30, flex=1
+            Content_Area gap=24 → marginTop=24 */}
         <View style={styles.calSection}>
 
           {/* WeekdayHeader: flex-row, gap=10, items-center, justify-center, text-center */}
@@ -122,62 +123,66 @@ export default function CalendarScreen() {
 
           {/* Calendar_Grid: flex-col, gap=10, items-center, justify-center */}
           <View style={styles.calGrid}>
-            {weeks.map((week, wi) => (
-              // Row_Week: flex, items-center, align-self stretch
-              <View key={wi} style={styles.weekRow}>
-                {week.map((day, di) => {
-                  if (!day) return <View key={di} style={styles.stateCell} />;
-                  const todayDay = isToday(day);
-                  const completed = completedDays.includes(day);
-                  const selected = selectedDay === day;
+            {weeks.map((week, wi) => {
+              // TodayBadge: Figma → position absolute in Row_Week
+              // right: 309 - colIndex*50 (Row 350px, cell 50px, badge 32px)
+              // top: -11px
+              const todayColIdx = week.findIndex(
+                (d) => d !== null && isToday(d as number)
+              );
 
-                  return (
-                    <TouchableOpacity
-                      key={di}
-                      // State: flex-col, gap=3, items-center, justify-center, py=4
-                      style={styles.stateCell}
-                      onPress={() => setSelectedDay(selected ? null : day)}
-                      activeOpacity={0.7}
-                    >
-                      {/* Ic_Check_Cal / Ic_Check_Cal_Ip: size=24, inner inset=8.33%, rounded=50px */}
-                      <View style={styles.checkOuter}>
-                        <View style={[
-                          styles.checkInner,
-                          completed && styles.checkDone,
-                          !completed && selected && styles.checkSelected,
-                          !completed && !selected && styles.checkEmpty,
-                        ]}>
-                          {completed && (
-                            <Ionicons name="checkmark" size={12} color="#FFFFFF" />
-                          )}
-                        </View>
+              return (
+                // Row_Week: flex, items-center, align-self stretch, position relative
+                <View key={wi} style={styles.weekRow}>
+                  {/* TodayBadge: absolute in Row_Week, Figma: right=309-colIdx*50, top=-11 */}
+                  {todayColIdx >= 0 && (
+                    <View style={[
+                      styles.todayBadgeWrap,
+                      { right: 309 - todayColIdx * 50, top: -11 },
+                    ]}>
+                      <View style={styles.todayBadge}>
+                        <Text style={styles.todayText}>오늘</Text>
                       </View>
+                      <View style={styles.todayTail} />
+                    </View>
+                  )}
 
-                      {/* 날짜 숫자: Medium 12px, lineHeight 16, tertiary */}
-                      <Text style={[
-                        styles.dayNum,
-                        (completed || selected) && styles.dayNumActive,
-                      ]}>
-                        {day}
-                      </Text>
+                  {week.map((day, di) => {
+                    if (!day) return <View key={di} style={styles.stateCell} />;
+                    const completed = completedDays.includes(day);
+                    const selected = selectedDay === day;
 
-                      {/* TodayBadge: absolute, bottom=-22 (셀 아래 행 간격에 위치)
-                          Figma: absolute in Row_Week at top=-11 of next row
-                          flex-col: Badge_Today pill + Badge_Today_Tail ▼ */}
-                      {todayDay && (
-                        <View style={styles.todayBadgeWrap}>
-                          <View style={styles.todayBadge}>
-                            <Text style={styles.todayText}>오늘</Text>
+                    return (
+                      <TouchableOpacity
+                        key={di}
+                        style={styles.stateCell}
+                        onPress={() => setSelectedDay(selected ? null : day)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={styles.checkOuter}>
+                          <View style={[
+                            styles.checkInner,
+                            completed && styles.checkDone,
+                            !completed && selected && styles.checkSelected,
+                            !completed && !selected && styles.checkEmpty,
+                          ]}>
+                            {completed && (
+                              <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+                            )}
                           </View>
-                          {/* Badge_Today_Tail: 4.33x3.75px 아래 방향 삼각형 */}
-                          <View style={styles.todayTail} />
                         </View>
-                      )}
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            ))}
+                        <Text style={[
+                          styles.dayNum,
+                          (completed || selected) && styles.dayNumActive,
+                        ]}>
+                          {day}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              );
+            })}
           </View>
         </View>
 
@@ -272,14 +277,17 @@ const styles = StyleSheet.create({
   // 분리선: w=0.5, h=100, #E0E0E0
   statDivider: { width: 0.5, height: 100, backgroundColor: '#E0E0E0' },
 
-  // Calendar_Section: flex-col, gap=21, items-center, px=20, py=30, align-self=stretch
+  // Calendar_Section: flex-col, gap=21, items-center, px=20, py=30, flex=1, align-self=stretch
+  // Content_Area gap=24 → marginTop=24 between statsCard and calSection
   calSection: {
     flexDirection: 'column',
     gap: 21,
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 30,
+    flex: 1,
     alignSelf: 'stretch',
+    marginTop: 24,
   },
 
   // WeekdayHeader: flex-row, gap=10, items-center, justify-center, text-center
@@ -308,11 +316,12 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
   },
 
-  // Row_Week: flex, items-center, align-self stretch
+  // Row_Week: flex, items-center, align-self stretch, position relative (for TodayBadge abs)
   weekRow: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'stretch',
+    position: 'relative',
   },
 
   // State (DateCell): flex-col, gap=3, items-center, justify-center, py=4
@@ -359,11 +368,12 @@ const styles = StyleSheet.create({
   },
   dayNumActive: { color: colors.text.primary },
 
-  // TodayBadge: absolute, bottom=-22 (셀 아래로 overflow)
-  // Figma: absolute in Row_Week at top=-11 of next row → same visual effect
+  // TodayBadge: Figma position:absolute in Row_Week
+  // w=32, flex-col, items-center
+  // right: 309 - colIdx*50 (dynamic), top: -11
   todayBadgeWrap: {
     position: 'absolute',
-    bottom: -22,
+    flexDirection: 'column',
     alignItems: 'center',
     zIndex: 10,
     width: 32,
