@@ -110,7 +110,8 @@ export default function MyPageScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
-  scroll: { paddingBottom: 96 },
+  // 탭바 88px + 홈인디케이터 34px = 122px
+  scroll: { paddingBottom: 122 },
 
   // NavBar: h=56, border-bottom 2px #F7F7F7, title absolutely centered
   navBar: {
