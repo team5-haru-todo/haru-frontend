@@ -1,9 +1,9 @@
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors, spacing, typography } from '@/src/constants';
 import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HomeIndicatorSpacer } from '../../src/components/common/HomeIndicatorSpacer';
-import { colors, typography, spacing } from '@/src/constants';
 import { useTerms } from '../../src/context/TermsContext';
 
 const ICON_ARROW_LEFT = require('../../assets/images/Icon/Arrow_left.png');
@@ -63,7 +63,7 @@ export default function TermsScreen() {
                 key={term.id}
                 style={styles.termItem}
                 activeOpacity={0.7}
-                onPress={() => router.push(term.route)}
+                onPress={() => router.push(term.route as any)}
               >
                 <Image
                   source={agreed[term.key] ? ICON_CHECK_LINE_ON : ICON_CHECK_LINE_OFF}
