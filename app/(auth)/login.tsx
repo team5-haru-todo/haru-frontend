@@ -1,15 +1,36 @@
-import { HomeIndicatorSpacer } from '../../src/components/common/HomeIndicatorSpacer'; // 공통 컴포넌트 경로
+import { HomeIndicatorSpacer } from '../../src/components/common/HomeIndicatorSpacer';
 import { colors, radius, spacing, typography } from '@/src/constants';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { useState } from 'react';
+import * as SecureStore from 'expo-secure-store';
+import { loginAsGuest } from '@/src/api/auth';
 
 const KAKAO_ICON = require('../../assets/images/Icon/KaKao.png');
 const APPLE_ICON = require('../../assets/images/Icon/Apple.png');
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
+  const [loading, setLoading] = useState(false);
+
+  const handleGuestLogin = async () => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const { accessToken } = await loginAsGuest();
+      if (Platform.OS !== 'web') {
+        await SecureStore.setItemAsync('authToken', accessToken);
+      }
+      router.replace('/(tabs)');
+    } catch (error) {
+      console.error('게스트 로그인 실패:', error);
+      // TODO: 에러 발생 시 사용자에게 보여줄 알림 UI 추가 필요
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -20,19 +41,19 @@ export default function LoginScreen() {
 
       {/* 2. Content_Area (상하단 제외 순수 영역) */}
       <View style={styles.contentArea}>
-        
-        {/* Top_Area (Figma 스펙: 246.67px 강제 보장) */}
+
+        {/* Top_Area */}
         <View style={styles.topArea}>
           <Text style={styles.title}>하루한개</Text>
           <Text style={styles.subtitle}>하루에 딱 하나만 해도 괜찮아요</Text>
         </View>
 
-        {/* Middle_Area (Figma 스펙: 246.67px 강제 보장) */}
+        {/* Middle_Area */}
         <View style={styles.middleArea}>
           <View style={styles.logo} />
         </View>
 
-        {/* Bottom_Area (Figma 스펙: 246.67px 강제 보장) */}
+        {/* Bottom_Area */}
         <View style={styles.bottomArea}>
           <View style={styles.bottomContentGroup}>
             {/* 툴팁 */}
@@ -57,9 +78,15 @@ export default function LoginScreen() {
             </TouchableOpacity>
 
             {/* 게스트 버튼 */}
-            {/* TODO: 임시 라우팅 - 확인 후 onPress 제거 */}
-            <TouchableOpacity style={styles.guestButton} activeOpacity={0.7} onPress={() => router.push('/(auth)/terms')}>
-              <Text style={styles.guestText}>게스트로 시작하기</Text>
+            <TouchableOpacity
+              style={styles.guestButton}
+              activeOpacity={0.7}
+              onPress={handleGuestLogin}
+              disabled={loading}
+            >
+              <Text style={styles.guestText}>
+                {loading ? '로딩 중...' : '게스트로 시작하기'}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -83,16 +110,15 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   contentArea: {
-    flex: 1, 
+    flex: 1,
   },
 
-  // ── 👥 피그마 실측 수치(246.67px) 및 Center 정렬 완전 박제 ──
   topArea: {
     flex: 1,
-    minHeight: 246.67,    // ⭕️ 피그마 실측값 강제 보장 (내용물에 의해 압착되는 것 방지)
+    minHeight: 246.67,
     alignItems: 'center',
-    justifyContent: 'center', // 정중앙 맞음 규칙 준수
-    paddingTop: 80,      
+    justifyContent: 'center',
+    paddingTop: 80,
     paddingBottom: 20,
     paddingLeft: 20,
     paddingRight: 20,
@@ -108,12 +134,12 @@ const styles = StyleSheet.create({
     color: colors.text.tertiary,
     textAlign: 'center',
   },
-  
+
   middleArea: {
     flex: 1,
-    minHeight: 246.67,    // ⭕️ 피그마 실측값 강제 보장
+    minHeight: 246.67,
     alignItems: 'center',
-    justifyContent: 'center', // 정중앙 맞음 규칙 준수
+    justifyContent: 'center',
   },
   logo: {
     width: 200,
@@ -124,9 +150,9 @@ const styles = StyleSheet.create({
 
   bottomArea: {
     flex: 1,
-    minHeight: 246.67,    // ⭕️ 피그마 실측값 강제 보장
+    minHeight: 246.67,
     alignItems: 'center',
-    justifyContent: 'center', // 정중앙 맞음 규칙 준수
+    justifyContent: 'center',
   },
 
   bottomContentGroup: {
@@ -134,12 +160,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingLeft: 20,
     paddingRight: 20,
-    gap: spacing.md,      
+    gap: spacing.md,
   },
 
   tooltipContainer: {
     alignSelf: 'center',
-    marginBottom: 4,      
+    marginBottom: 4,
   },
   tooltipBubble: {
     backgroundColor: colors.surface.default,
@@ -173,7 +199,6 @@ const styles = StyleSheet.create({
     borderTopColor: colors.surface.default,
   },
 
-  // 버튼 스타일
   btnKakao: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -221,6 +246,6 @@ const styles = StyleSheet.create({
 
   indicatorRedWrapper: {
     width: '100%',
-    backgroundColor: 'rgba(255, 0, 0, 0.2)', 
+    backgroundColor: 'rgba(255, 0, 0, 0.2)',
   },
 });
