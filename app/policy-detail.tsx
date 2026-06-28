@@ -1,9 +1,12 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, SafeAreaView } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 
 import { colors } from '@/src/constants/colors';
+import { layout } from '@/src/constants/layout';
+import { StatusBarSpacer } from '@/src/components/common/StatusBarSpacer';
 
 type PolicyType = 'terms' | 'privacy' | 'marketing';
 
@@ -85,7 +88,9 @@ export default function PolicyDetailScreen() {
   const content = CONTENT[type ?? 'terms'];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
+      <StatusBar style="dark" />
+      <StatusBarSpacer />
       {/* NavBar: 약관 및 정책 (centered) + X close button on RIGHT */}
       <View style={styles.navBar}>
         <Text style={styles.navTitle}>약관 및 정책</Text>
@@ -99,7 +104,11 @@ export default function PolicyDetailScreen() {
       </View>
 
       {/* ScrollArea: pt=32, px=20 */}
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollArea}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Title: Bold 20px, lineHeight 32 */}
         <Text style={styles.title}>{content.title}</Text>
 
@@ -113,12 +122,13 @@ export default function PolicyDetailScreen() {
           ))}
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
+  scrollArea: { flex: 1 },
 
   // NavBar: h=56, title centered, X at right x=346 (px=20 from right)
   navBar: {
@@ -156,7 +166,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingTop: 32,
     paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingBottom: layout.homeIndicatorHeight,
   },
 
   // Title: Bold 20px, lineHeight 32
@@ -165,6 +175,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Pretendard-Bold',
     color: colors.text.primary,
     lineHeight: 32,
+    letterSpacing: -1,
   },
 
   // Article list: gap=24 between items, marginTop=24 from title
@@ -178,17 +189,17 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     gap: 8,
   },
-  // Article heading: SemiBold 16px, lineHeight 24
+  // Article heading: Bold 16px, lineHeight 24
   articleHeading: {
     fontSize: 16,
-    fontFamily: 'Pretendard-SemiBold',
+    fontFamily: 'Pretendard-Bold',
     color: colors.text.primary,
     lineHeight: 24,
   },
-  // Article body: Regular 14px, lineHeight 20
+  // Article body: Medium 14px, lineHeight 20
   articleBody: {
     fontSize: 14,
-    fontFamily: 'Pretendard-Regular',
+    fontFamily: 'Pretendard-Medium',
     color: colors.text.secondary,
     lineHeight: 20,
   },

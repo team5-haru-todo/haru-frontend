@@ -1,9 +1,12 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 
 import { colors } from '@/src/constants/colors';
+import { layout } from '@/src/constants/layout';
+import { StatusBarSpacer } from '@/src/components/common/StatusBarSpacer';
 
 const ITEMS = [
   { key: 'terms', label: '(필수) 서비스 이용약관' },
@@ -13,7 +16,9 @@ const ITEMS = [
 
 export default function PolicyScreen() {
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
+      <StatusBar style="dark" />
+      <StatusBarSpacer />
       {/* NavBar: Arrow_left + 약관 및 정책 (centered abs) */}
       <View style={styles.navBar}>
         <TouchableOpacity onPress={() => router.back()} style={styles.navLeft} activeOpacity={0.7}>
@@ -38,7 +43,7 @@ export default function PolicyScreen() {
           ))}
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -76,6 +81,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 32,
     paddingHorizontal: 20,
+    paddingBottom: layout.homeIndicatorHeight,
     overflow: 'hidden',
   },
 
