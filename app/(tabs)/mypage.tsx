@@ -7,13 +7,15 @@ import {
   StyleSheet,
   Image,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
 import { colors } from '@/src/constants/colors';
 import { layout } from '@/src/constants/layout';
 import { StatusBarSpacer } from '@/src/components/common/StatusBarSpacer';
+
+const ICON_AVATAR = require('../../assets/images/Icon/Avatar.png');
+const ICON_ARROW_RIGHT = require('../../assets/images/Icon/Arrow_right.png');
 
 export default function MyPageScreen() {
   const [pushEnabled, setPushEnabled] = useState(true);
@@ -35,7 +37,7 @@ export default function MyPageScreen() {
           <View style={styles.profileLeft}>
             {/* Avatar: 74x74 */}
             <Image
-              source={require('../../assets/images/profile-avatar.png')}
+              source={ICON_AVATAR}
               style={styles.avatar}
               resizeMode="cover"
             />
@@ -88,7 +90,7 @@ export default function MyPageScreen() {
             </View>
             <TouchableOpacity style={styles.listItem} activeOpacity={0.7}>
               <Text style={styles.listItemText}>문의하기</Text>
-              <Ionicons name="chevron-forward" size={24} color={colors.text.tertiary} />
+              <Image source={ICON_ARROW_RIGHT} style={styles.listIcon} />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.listItem}
@@ -96,7 +98,7 @@ export default function MyPageScreen() {
               onPress={() => router.push('/policy')}
             >
               <Text style={styles.listItemText}>약관 및 정책</Text>
-              <Ionicons name="chevron-forward" size={24} color={colors.text.tertiary} />
+              <Image source={ICON_ARROW_RIGHT} style={styles.listIcon} />
             </TouchableOpacity>
           </View>
 
@@ -260,6 +262,7 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     lineHeight: 24,
   },
+  listIcon: { width: 24, height: 24, resizeMode: 'contain' },
   toggle: {
     width: 51,
     height: 31,

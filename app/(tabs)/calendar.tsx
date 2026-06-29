@@ -5,13 +5,18 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  Image,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 
 import { colors } from '@/src/constants/colors';
 import { layout } from '@/src/constants/layout';
 import { StatusBarSpacer } from '@/src/components/common/StatusBarSpacer';
+
+const ICON_ARROW_LEFT = require('../../assets/images/Icon/Arrow_left.png');
+const ICON_ARROW_RIGHT = require('../../assets/images/Icon/Arrow_right.png');
+const ICON_CHECK_DONE = require('../../assets/images/Icon/Ic_Check.png');
+const ICON_CHECK_EMPTY = require('../../assets/images/Icon/Ic_Check_Cal_Ip.png');
 
 const DAYS_KO = ['일', '월', '화', '수', '목', '금', '토'];
 const DAYS_FULL = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
@@ -107,11 +112,11 @@ export default function CalendarScreen() {
         {/* NavBar: h=56, justify-between, border-bottom 2px #F7F7F7, px=20 */}
         <View style={styles.navBar}>
           <TouchableOpacity onPress={goToPrevMonth} style={styles.navArrow} activeOpacity={0.7}>
-            <Ionicons name="chevron-back" size={24} color={colors.text.primary} />
+            <Image source={ICON_ARROW_LEFT} style={styles.navIcon} />
           </TouchableOpacity>
           <Text style={styles.navTitle}>{currentYear}년 {currentMonth}월</Text>
           <TouchableOpacity onPress={goToNextMonth} style={styles.navArrow} activeOpacity={0.7}>
-            <Ionicons name="chevron-forward" size={24} color={colors.text.primary} />
+            <Image source={ICON_ARROW_RIGHT} style={styles.navIcon} />
           </TouchableOpacity>
         </View>
 
@@ -177,17 +182,10 @@ export default function CalendarScreen() {
                         onPress={() => setSelectedDay(day)}
                         activeOpacity={0.7}
                       >
-                        <View style={styles.checkOuter}>
-                          <View style={[
-                            styles.checkInner,
-                            completed && styles.checkDone,
-                            !completed && styles.checkEmpty,
-                          ]}>
-                            {completed && (
-                              <Ionicons name="checkmark" size={12} color="#FFFFFF" />
-                            )}
-                          </View>
-                        </View>
+                        <Image
+                          source={completed ? ICON_CHECK_DONE : ICON_CHECK_EMPTY}
+                          style={styles.checkIcon}
+                        />
                         <Text style={styles.dayNum}>
                           {day}
                         </Text>
@@ -213,11 +211,7 @@ export default function CalendarScreen() {
               {selectedTodos.length > 0 ? selectedTodos.map(todo => (
                 <View key={todo.id} style={styles.todoCard}>
                   <Text style={styles.todoText}>{todo.text}</Text>
-                  <View style={styles.todoCheck}>
-                    <View style={styles.todoCheckInner}>
-                      <Ionicons name="checkmark" size={12} color="#FFFFFF" />
-                    </View>
-                  </View>
+                  <Image source={ICON_CHECK_DONE} style={styles.checkIcon} />
                 </View>
               )) : (
                 <Text style={styles.emptyText}>완료된 할 일이 없어요</Text>
@@ -250,6 +244,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   navArrow: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
+  navIcon: { width: 24, height: 24, resizeMode: 'contain' },
   navTitle: {
     fontSize: 18,
     fontFamily: 'Pretendard-SemiBold',
@@ -362,24 +357,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
 
-  // Ic_Check_Cal / Ip: outer size=24, inner inset=8.33% (2px), rounded=50px
-  checkOuter: {
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkInner: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  // Ic_Check_Cal: bg=#259BFF (completed)
-  checkDone: { backgroundColor: '#259BFF' },
-  // Ic_Check_Cal_Ip: bg=#F4F5F7 (incomplete)
-  checkEmpty: { backgroundColor: '#F4F5F7' },
+  // Ic_Check / Ic_Check_Cal_Ip: asset icon 24x24
+  checkIcon: { width: 24, height: 24, resizeMode: 'contain' },
 
   // 날짜 숫자: Medium 12px, lineHeight 16, tertiary, text-center
   dayNum: {
@@ -491,21 +470,6 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     textDecorationLine: 'line-through',
     textAlign: 'center',
-  },
-  // Component 2: 24x24 outer, 20x20 blue base inset by 2px
-  todoCheck: {
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  todoCheckInner: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#259BFF',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   emptyText: {
     fontSize: 14,

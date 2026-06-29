@@ -1,12 +1,13 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Image } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
 import { colors } from '@/src/constants/colors';
 import { layout } from '@/src/constants/layout';
 import { StatusBarSpacer } from '@/src/components/common/StatusBarSpacer';
+
+const ICON_CLOSE = require('../assets/images/Icon/Ic_Close.png');
 
 type PolicyType = 'terms' | 'privacy' | 'marketing';
 
@@ -99,7 +100,7 @@ export default function PolicyDetailScreen() {
           style={styles.closeBtn}
           activeOpacity={0.7}
         >
-          <Ionicons name="close" size={24} color={colors.text.primary} />
+          <Image source={ICON_CLOSE} style={styles.closeIcon} />
         </TouchableOpacity>
       </View>
 
@@ -161,6 +162,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  closeIcon: { width: 24, height: 24, resizeMode: 'contain' },
 
   // ScrollArea: pt=32, px=20
   scrollContent: {
