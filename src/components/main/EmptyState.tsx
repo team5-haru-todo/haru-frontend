@@ -1,21 +1,29 @@
-import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
-import { colors } from '@/src/constants/colors';
-import { typography } from '@/src/constants/typography';
-import { spacing, radius } from '@/src/constants/layout';
+import { colors } from "@/src/constants/colors";
+import { radius, spacing } from "@/src/constants/layout";
+import { typography } from "@/src/constants/typography";
+import { useState } from "react";
+import {
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 type Props = {
   onSubmit: (text: string) => void;
 };
 
 export function EmptyState({ onSubmit }: Props) {
-  const [inputText, setInputText] = useState('');
+  const [inputText, setInputText] = useState("");
   const hasText = inputText.trim().length > 0;
 
   return (
     <View style={styles.card}>
       <Text style={styles.greeting}>
-        딱 하나만 해도 괜찮아요,{'\n'}오늘의 <Text style={styles.accent}>'한개'</Text>를 적어볼까요?
+        딱 하나만 해도 괜찮아요,{"\n"}오늘의 {"'"}
+        <Text style={styles.accent}>한개</Text>
+        {"'"}를 적어볼까요?
       </Text>
 
       <View style={styles.inputRow}>
@@ -32,11 +40,19 @@ export function EmptyState({ onSubmit }: Props) {
       </View>
 
       <TouchableOpacity
-        style={[styles.button, hasText ? styles.buttonActive : styles.buttonDisabled]}
+        style={[
+          styles.button,
+          hasText ? styles.buttonActive : styles.buttonDisabled,
+        ]}
         onPress={() => hasText && onSubmit(inputText.trim())}
         activeOpacity={hasText ? 0.8 : 1}
       >
-        <Text style={[styles.buttonText, hasText ? styles.buttonTextActive : styles.buttonTextDisabled]}>
+        <Text
+          style={[
+            styles.buttonText,
+            hasText ? styles.buttonTextActive : styles.buttonTextDisabled,
+          ]}
+        >
           도전하기
         </Text>
       </TouchableOpacity>
@@ -50,32 +66,32 @@ const styles = StyleSheet.create({
     borderRadius: radius.card,
     paddingHorizontal: spacing.xxl,
     paddingVertical: spacing.xxxl + spacing.sm,
-    alignItems: 'center',
+    alignItems: "center",
     gap: spacing.xxxl,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.13,
     shadowRadius: 24,
     elevation: 6,
-    width: '100%',
+    width: "100%",
   },
   greeting: {
     ...typography.t1Title1,
     color: colors.text.primary,
-    textAlign: 'center',
+    textAlign: "center",
     paddingVertical: spacing.sm,
   },
   accent: {
     color: colors.primary.default,
   },
   inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.surface.sunken,
     borderRadius: radius.button,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    width: '100%',
+    width: "100%",
     minHeight: 48,
   },
   cursor: {
@@ -93,8 +109,8 @@ const styles = StyleSheet.create({
   button: {
     height: 54,
     borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: spacing.xl,
     minWidth: 200,
   },
