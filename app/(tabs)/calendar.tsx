@@ -5,17 +5,32 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  SafeAreaView,
+  Image,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar';
 
 import { colors } from '@/src/constants/colors';
+import { layout } from '@/src/constants/layout';
+import { StatusBarSpacer } from '@/src/components/common/StatusBarSpacer';
+
+const ICON_ARROW_LEFT = require('../../assets/images/Icon/Arrow_left.png');
+const ICON_ARROW_RIGHT = require('../../assets/images/Icon/Arrow_right.png');
+const ICON_CHECK_DONE = require('../../assets/images/Icon/Ic_Check.png');
+const ICON_CHECK_EMPTY = require('../../assets/images/Icon/Ic_Check_Cal_Ip.png');
 
 const DAYS_KO = ['일', '월', '화', '수', '목', '금', '토'];
 const DAYS_FULL = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
 
 const MOCK_COMPLETED: Record<string, number[]> = {
-  '2026-6': [1, 8, 12, 15, 22, 29],
+  '2026-6': [1, 12, 15, 22, 29],
+};
+
+const MOCK_MONTHLY_COMPLETION_COUNTS: Record<string, number> = {
+  '2026-6': 12,
+};
+
+const MOCK_COMPLETED_COUNTS: Record<string, number> = {
+  '2026-6-11': 3,
 };
 
 const MOCK_TODOS: Record<string, { id: number; text: string }[]> = {
@@ -46,6 +61,8 @@ export default function CalendarScreen() {
   const daysInMonth = getDaysInMonth(currentYear, currentMonth);
   const firstDayOfWeek = getFirstDayOfWeek(currentYear, currentMonth);
   const completedDays = MOCK_COMPLETED[`${currentYear}-${currentMonth}`] ?? [];
+  const monthlyCompletionCount =
+    MOCK_MONTHLY_COMPLETION_COUNTS[`${currentYear}-${currentMonth}`] ?? completedDays.length;
 
   const isToday = (day: number) =>
     day === today.getDate() &&
@@ -76,6 +93,10 @@ export default function CalendarScreen() {
   const selectedTodos =
     selectedDay ? (MOCK_TODOS[`${currentYear}-${currentMonth}-${selectedDay}`] ?? []) : [];
 
+  const selectedCompletedCount = selectedDay
+    ? (MOCK_COMPLETED_COUNTS[`${currentYear}-${currentMonth}-${selectedDay}`] ?? selectedTodos.length)
+    : 0;
+
   const selectedDayName = selectedDay
     ? DAYS_FULL[new Date(currentYear, currentMonth - 1, selectedDay).getDay()].slice(0, 1) + '요일'
     : '';
@@ -83,17 +104,19 @@ export default function CalendarScreen() {
   const streak = 3;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
+      <StatusBar style="dark" />
+      <StatusBarSpacer />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
         {/* NavBar: h=56, justify-between, border-bottom 2px #F7F7F7, px=20 */}
         <View style={styles.navBar}>
           <TouchableOpacity onPress={goToPrevMonth} style={styles.navArrow} activeOpacity={0.7}>
-            <Ionicons name="chevron-back" size={24} color={colors.text.primary} />
+            <Image source={ICON_ARROW_LEFT} style={styles.navIcon} />
           </TouchableOpacity>
           <Text style={styles.navTitle}>{currentYear}년 {currentMonth}월</Text>
           <TouchableOpacity onPress={goToNextMonth} style={styles.navArrow} activeOpacity={0.7}>
-            <Ionicons name="chevron-forward" size={24} color={colors.text.primary} />
+            <Image source={ICON_ARROW_RIGHT} style={styles.navIcon} />
           </TouchableOpacity>
         </View>
 
@@ -101,7 +124,7 @@ export default function CalendarScreen() {
         <View style={styles.statsCard}>
           <View style={styles.statCell}>
             <Text style={styles.statLabel}>이번 달 완료</Text>
-            <Text style={styles.statValue}>{completedDays.length}일</Text>
+            <Text style={styles.statValue}>{monthlyCompletionCount}일</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statCell}>
@@ -148,33 +171,22 @@ export default function CalendarScreen() {
                   )}
 
                   {week.map((day, di) => {
-                    if (!day) return <View key={di} style={styles.stateCell} />;
+                    if (!day) return <View key={di} style={[styles.stateCell, styles.emptyStateCell]} />;
                     const completed = completedDays.includes(day);
                     const selected = selectedDay === day;
 
                     return (
                       <TouchableOpacity
                         key={di}
-                        style={styles.stateCell}
-                        onPress={() => setSelectedDay(selected ? null : day)}
+                        style={[styles.stateCell, selected && styles.stateCellSelected]}
+                        onPress={() => setSelectedDay(day)}
                         activeOpacity={0.7}
                       >
-                        <View style={styles.checkOuter}>
-                          <View style={[
-                            styles.checkInner,
-                            completed && styles.checkDone,
-                            !completed && selected && styles.checkSelected,
-                            !completed && !selected && styles.checkEmpty,
-                          ]}>
-                            {completed && (
-                              <Ionicons name="checkmark" size={12} color="#FFFFFF" />
-                            )}
-                          </View>
-                        </View>
-                        <Text style={[
-                          styles.dayNum,
-                          (completed || selected) && styles.dayNumActive,
-                        ]}>
+                        <Image
+                          source={completed ? ICON_CHECK_DONE : ICON_CHECK_EMPTY}
+                          style={styles.checkIcon}
+                        />
+                        <Text style={styles.dayNum}>
                           {day}
                         </Text>
                       </TouchableOpacity>
@@ -193,15 +205,13 @@ export default function CalendarScreen() {
               <Text style={styles.dateHeaderText}>
                 {currentMonth}.{selectedDay} {selectedDayName}
               </Text>
-              <Text style={styles.dateCountText}>{selectedTodos.length}개 완료</Text>
+              <Text style={styles.dateCountText}>{selectedCompletedCount}개 완료</Text>
             </View>
             <View style={styles.todoList}>
               {selectedTodos.length > 0 ? selectedTodos.map(todo => (
                 <View key={todo.id} style={styles.todoCard}>
                   <Text style={styles.todoText}>{todo.text}</Text>
-                  <View style={styles.todoCheck}>
-                    <Ionicons name="checkmark" size={12} color="#FFFFFF" />
-                  </View>
+                  <Image source={ICON_CHECK_DONE} style={styles.checkIcon} />
                 </View>
               )) : (
                 <Text style={styles.emptyText}>완료된 할 일이 없어요</Text>
@@ -211,14 +221,14 @@ export default function CalendarScreen() {
         )}
 
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
-  // 탭바 88px + 홈인디케이터 34px = 122px
-  scroll: { paddingBottom: 122 },
+  // Figma navigation_bar 88px already includes the bottom safe-area region.
+  scroll: { paddingBottom: layout.tabBarHeight },
 
   // NavBar: h=56, justify-between, px=20, py=14, border-bottom 2px #F7F7F7
   navBar: {
@@ -234,6 +244,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   navArrow: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
+  navIcon: { width: 24, height: 24, resizeMode: 'contain' },
   navTitle: {
     fontSize: 18,
     fontFamily: 'Pretendard-SemiBold',
@@ -330,33 +341,24 @@ const styles = StyleSheet.create({
   // State: flex=1, flex-col, justify-center, items-center, gap=3, padding: 4px 0
   stateCell: {
     flex: 1,
+    height: 51,
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 4,
     gap: 3,
   },
+  emptyStateCell: {
+    height: 53,
+  },
+  stateCellSelected: {
+    borderWidth: 1,
+    borderColor: '#259BFF',
+    borderRadius: 8,
+  },
 
-  // Ic_Check_Cal / Ip: outer size=24, inner inset=8.33% (2px), rounded=50px
-  checkOuter: {
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkInner: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  // Ic_Check_Cal: bg=#259BFF (completed)
-  checkDone: { backgroundColor: '#259BFF' },
-  // Selected: border 1px #259BFF
-  checkSelected: { borderWidth: 1, borderColor: '#259BFF', backgroundColor: 'transparent' },
-  // Ic_Check_Cal_Ip: bg=#F4F5F7 (incomplete)
-  checkEmpty: { backgroundColor: '#F4F5F7' },
+  // Ic_Check / Ic_Check_Cal_Ip: asset icon 24x24
+  checkIcon: { width: 24, height: 24, resizeMode: 'contain' },
 
   // 날짜 숫자: Medium 12px, lineHeight 16, tertiary, text-center
   dayNum: {
@@ -367,8 +369,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     width: '100%',
   },
-  dayNumActive: { color: colors.text.primary },
-
   // TodayBadge: Figma position:absolute in Row_Week
   // w=32, flex-col, items-center
   // right: 309 - colIdx*50 (dynamic), top: -11
@@ -438,7 +438,7 @@ const styles = StyleSheet.create({
   // Row_DateHeader right: 12px, lineHeight 16, tertiary
   dateCountText: {
     fontSize: 12,
-    fontFamily: 'Pretendard-Regular',
+    fontFamily: 'Pretendard-Medium',
     color: colors.text.tertiary,
     lineHeight: 16,
   },
@@ -470,15 +470,6 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     textDecorationLine: 'line-through',
     textAlign: 'center',
-  },
-  // Component 2: 24x24, bg=#259BFF, rounded=12
-  todoCheck: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#259BFF',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   emptyText: {
     fontSize: 14,
