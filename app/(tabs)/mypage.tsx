@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -13,12 +14,62 @@ import { StatusBar } from 'expo-status-bar';
 import { colors } from '@/src/constants/colors';
 import { layout } from '@/src/constants/layout';
 import { StatusBarSpacer } from '@/src/components/common/StatusBarSpacer';
+import { getMe, getMySettings, updateMySettings, UserResponse } from '@/src/api/user';
 
 const ICON_AVATAR = require('../../assets/images/Icon/Avatar.png');
 const ICON_ARROW_RIGHT = require('../../assets/images/Icon/Arrow_right.png');
 
 export default function MyPageScreen() {
+  const [user, setUser] = useState<UserResponse | null>(null);
   const [pushEnabled, setPushEnabled] = useState(true);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchData() {
+      try {
+        const [me, settings] = await Promise.all([getMe(), getMySettings()]);
+        if (!isMounted) return;
+        setUser(me);
+        setPushEnabled(settings.pushEnabled);
+      } catch (error) {
+        console.error('마이페이지 정보 조회 실패:', error);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+
+    fetchData();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleTogglePush = async () => {
+    const next = !pushEnabled;
+    setPushEnabled(next);
+    try {
+      await updateMySettings(next);
+    } catch (error) {
+      console.error('푸시알림 설정 변경 실패:', error);
+      setPushEnabled(!next);
+    }
+  };
+
+  const connectedLabel =
+    user?.connectedProviders && user.connectedProviders.length > 0
+      ? `${user.connectedProviders[0] === 'kakao' ? '카카오' : user.connectedProviders[0]} 계정 연결됨`
+      : '연결된 계정 없음';
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <StatusBar style="dark" />
+        <ActivityIndicator color={colors.text.primary} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -26,56 +77,44 @@ export default function MyPageScreen() {
       <StatusBarSpacer />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* NavBar: h=56, "설정" 절대 가운데, border-bottom 2px #F7F7F7 */}
         <View style={styles.navBar}>
           <Text style={styles.navTitle}>설정</Text>
         </View>
 
-        {/* Profile_Area: px=20, py=24, border-bottom 1px #E8E9EC, items-start justify-between */}
         <View style={styles.profileArea}>
-          {/* Profile_Left: gap=12, items-center */}
           <View style={styles.profileLeft}>
-            {/* Avatar: 74x74 */}
-            <Image
-              source={ICON_AVATAR}
-              style={styles.avatar}
-              resizeMode="cover"
-            />
-            {/* Group_ProfileText: gap=4 */}
+            <Image source={ICON_AVATAR} style={styles.avatar} resizeMode="cover" />
             <View style={styles.profileTexts}>
-              <Text style={styles.profileName}>김다은</Text>
-              <Text style={styles.profileEmail}>Groom12@kakao.com</Text>
-              <Text style={styles.profileAccount}>카카오 계정 연결됨</Text>
+              <Text style={styles.profileName}>{user?.nickname ?? '-'}</Text>
+              <Text style={styles.profileAccount}>{connectedLabel}</Text>
             </View>
           </View>
-          {/* Btn_Account: border 1px #C2C6D0, rounded=16, px=12, py=4 */}
-          <TouchableOpacity style={styles.accountBtn} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.accountBtn}
+            activeOpacity={0.7}
+            onPress={() => {
+              // TODO: 계정관리 화면 라우트 생성 후 연결
+              console.log('계정 관리 화면 — 라우트 미생성');
+            }}
+          >
             <Text style={styles.accountBtnText}>계정 관리</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Divider_Section: h=8, #F4F5F7 */}
         <View style={styles.sectionDivider} />
 
-        {/* Settings_List */}
         <View style={styles.settingsList}>
-
-          {/* Section_Notification: flex-col, align-items flex-start */}
           <View style={styles.sectionGroup}>
-            {/* Section_Title: pt=24, pb=8, pl=20 */}
             <View style={styles.sectionTitle}>
               <Text style={styles.sectionTitleText}>알림</Text>
             </View>
-            {/* List_Item: h=52, px=20, justify-between */}
             <View style={styles.listItem}>
               <Text style={styles.listItemText}>푸쉬알림</Text>
-              {/* iOS Toggle: w=51, h=31 */}
-              {/* IOsToggle: w=51, h=31, borderRadius=16, track #65C466, knob 27x27 */}
               <TouchableOpacity
                 accessibilityRole="switch"
                 accessibilityState={{ checked: pushEnabled }}
                 activeOpacity={0.8}
-                onPress={() => setPushEnabled((enabled) => !enabled)}
+                onPress={handleTogglePush}
                 style={[styles.toggle, pushEnabled ? styles.toggleOn : styles.toggleOff]}
               >
                 <View style={[styles.toggleKnob, pushEnabled ? styles.toggleKnobOn : styles.toggleKnobOff]} />
@@ -83,7 +122,6 @@ export default function MyPageScreen() {
             </View>
           </View>
 
-          {/* Section_Support: flex-col, align-items flex-start */}
           <View style={styles.sectionGroup}>
             <View style={styles.sectionTitle}>
               <Text style={styles.sectionTitleText}>지원</Text>
@@ -102,7 +140,6 @@ export default function MyPageScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Section_Version: flex-col, align-items flex-start */}
           <View style={styles.sectionGroup}>
             <View style={styles.sectionTitle}>
               <Text style={styles.sectionTitleText}>앱 버전 정보</Text>
@@ -112,7 +149,6 @@ export default function MyPageScreen() {
               <Text style={styles.versionText}>최신 버전 사용 중</Text>
             </View>
           </View>
-
         </View>
       </ScrollView>
     </View>
@@ -121,10 +157,8 @@ export default function MyPageScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
-  // Figma navigation_bar 88px already includes the bottom safe-area region.
+  loadingContainer: { justifyContent: 'center', alignItems: 'center' },
   scroll: { paddingBottom: layout.tabBarHeight },
-
-  // NavBar: h=56, border-bottom 2px #F7F7F7, title absolutely centered
   navBar: {
     height: 56,
     flexDirection: 'row',
@@ -137,7 +171,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     width: '100%',
   },
-  // NavBar title: SemiBold 18px, lineHeight 26, letterSpacing -0.5, absolute centered
   navTitle: {
     position: 'absolute',
     left: 0,
@@ -149,8 +182,6 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
     lineHeight: 26,
   },
-
-  // Profile_Area: px=20, py=24, border-bottom 1px #E8E9EC, items-start, justify-between
   profileArea: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -162,13 +193,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     width: '100%',
   },
-  // Profile_Left: gap=12, items-center
   profileLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  // Avatar: 74x74
   avatar: { width: 74, height: 74, borderRadius: 37 },
-  // Group_ProfileText: gap=4
   profileTexts: { gap: 4 },
-  // Name: SemiBold 18px, lineHeight 26, letterSpacing -0.5
   profileName: {
     fontSize: 18,
     fontFamily: 'Pretendard-SemiBold',
@@ -176,21 +203,18 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
     lineHeight: 26,
   },
-  // Email: Medium 14px, lineHeight 20, secondary
   profileEmail: {
     fontSize: 14,
     fontFamily: 'Pretendard-Medium',
     color: colors.text.secondary,
     lineHeight: 20,
   },
-  // Account: Medium 14px, lineHeight 20, tertiary
   profileAccount: {
     fontSize: 14,
     fontFamily: 'Pretendard-Medium',
     color: colors.text.tertiary,
     lineHeight: 20,
   },
-  // Btn_Account: border 1px #C2C6D0, rounded=16, px=12, py=4
   accountBtn: {
     borderWidth: 1,
     borderColor: '#C2C6D0',
@@ -199,34 +223,24 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     backgroundColor: '#FFFFFF',
   },
-  // Button text: Medium 12px, lineHeight 16, secondary
   accountBtnText: {
     fontSize: 12,
     fontFamily: 'Pretendard-Medium',
     color: colors.text.secondary,
     lineHeight: 16,
   },
-
-  // Divider_Section: h=8, #F4F5F7
   sectionDivider: { height: 8, backgroundColor: '#F4F5F7', width: '100%' },
-
-  // Settings_List: flex-col, items-start, overflow-clip, w=390, bg=white
   settingsList: {
     flexDirection: 'column',
     alignItems: 'flex-start',
     width: '100%',
     backgroundColor: '#FFFFFF',
   },
-
-  // Section_Support / Section_Version: flex-col, align-items flex-start
   sectionGroup: {
     flexDirection: 'column',
     alignItems: 'flex-start',
     width: '100%',
   },
-
-  // Section_Title: bg=white, flex, items-center, pb=8, pt=24, px=20
-  // Figma는 좁은 컨테이너에서 justify-center 사용 → RN 전체 너비에서는 flex-start로 좌측 정렬
   sectionTitle: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -237,15 +251,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     width: '100%',
   },
-  // Section title text: Medium 12px, lineHeight 16, tertiary
   sectionTitleText: {
     fontSize: 12,
     fontFamily: 'Pretendard-Medium',
     color: colors.text.tertiary,
     lineHeight: 16,
   },
-
-  // List_Item: h=52, px=20, flex-row, items-center, justify-between
   listItem: {
     height: 52,
     flexDirection: 'row',
@@ -255,7 +266,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     width: '100%',
   },
-  // List item text: Regular 16px, lineHeight 24, text-primary
   listItemText: {
     fontSize: 16,
     fontFamily: 'Pretendard-Regular',
@@ -286,7 +296,6 @@ const styles = StyleSheet.create({
   },
   toggleKnobOn: { right: 2 },
   toggleKnobOff: { left: 2 },
-  // Version right text: Regular 11px, lineHeight 14, tertiary
   versionText: {
     fontSize: 11,
     fontFamily: 'Pretendard-Regular',
