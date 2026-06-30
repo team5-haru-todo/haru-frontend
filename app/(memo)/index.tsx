@@ -3,10 +3,12 @@ import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Animated, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { ScrollView, Swipeable } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import type { TaskResponse } from '@/src/api/task';
+import { useMemos } from '@/src/hooks/useMemos';
 import { colors, radius, spacing, typography } from '@/src/constants';
 
 const pinIcon = require('@/assets/images/memo/pin-icon.png');
@@ -16,30 +18,28 @@ const trashIcon = require('@/assets/images/memo/trash-icon.png');
 const TOAST_VISIBLE_MS = 3000;
 const TOAST_FADE_MS = 400;
 
-type Memo = {
-  id: string;
-  title: string;
-  createdAt: number;
-  pinned: boolean;
-};
-
-function formatRelativeDays(createdAt: number) {
-  const days = Math.floor((Date.now() - createdAt) / (1000 * 60 * 60 * 24));
+function formatRelativeDays(createdAt: string) {
+  const createdTime = new Date(createdAt).getTime();
+  if (Number.isNaN(createdTime)) {
+    return '';
+  }
+  const days = Math.floor((Date.now() - createdTime) / (1000 * 60 * 60 * 24));
   return days <= 0 ? '오늘' : `${days}일 전`;
 }
 
 export default function MemoListScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { memos, loading, error, addMemo, editMemo, removeMemo, toggleMemoRecurring } = useMemos();
   const [isAdding, setIsAdding] = useState(false);
   const [memoText, setMemoText] = useState('');
-  const [memos, setMemos] = useState<Memo[]>([]);
   const [toastVisible, setToastVisible] = useState(false);
-  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [editText, setEditText] = useState('');
   const toastOpacity = useRef(new Animated.Value(0)).current;
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const editSubmittingRef = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -64,45 +64,64 @@ export default function MemoListScreen() {
     }, TOAST_VISIBLE_MS);
   };
 
-  const handleSubmitMemo = () => {
-    const title = memoText.trim();
-    if (title.length > 0) {
-      setMemos((prev) => [
-        { id: Date.now().toString(), title, createdAt: Date.now(), pinned: false },
-        ...prev,
-      ]);
+  const handleSubmitMemo = async () => {
+    const content = memoText.trim();
+    if (content.length === 0) {
+      setMemoText('');
+      setIsAdding(false);
+      return;
     }
-    setMemoText('');
-    setIsAdding(false);
+
+    const success = await addMemo(content);
+    if (success) {
+      setMemoText('');
+      setIsAdding(false);
+    }
   };
 
-  const handleTogglePin = (id: string) => {
-    setMemos((prev) => prev.map((memo) => (memo.id === id ? { ...memo, pinned: !memo.pinned } : memo)));
+  const handleTogglePin = async (memo: TaskResponse) => {
+    await toggleMemoRecurring(memo);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (pendingDeleteId !== null) {
-      setMemos((prev) => prev.filter((memo) => memo.id !== pendingDeleteId));
+      const success = await removeMemo(pendingDeleteId);
+      if (!success) {
+        return;
+      }
     }
     setPendingDeleteId(null);
   };
 
-  const startEditing = (memo: Memo) => {
+  const startEditing = (memo: TaskResponse) => {
     setEditingId(memo.id);
-    setEditText(memo.title);
+    setEditText(memo.content);
   };
 
-  const handleSubmitEdit = () => {
-    const title = editText.trim();
-    if (title.length > 0 && editingId !== null) {
-      setMemos((prev) => prev.map((memo) => (memo.id === editingId ? { ...memo, title } : memo)));
+  const handleSubmitEdit = async () => {
+    if (editSubmittingRef.current) {
+      return;
     }
-    setEditingId(null);
-    setEditText('');
+
+    const content = editText.trim();
+    if (content.length === 0 || editingId === null) {
+      setEditingId(null);
+      setEditText('');
+      return;
+    }
+
+    editSubmittingRef.current = true;
+    const taskId = editingId;
+    const success = await editMemo(taskId, content);
+    if (success) {
+      setEditingId(null);
+      setEditText('');
+    }
+    editSubmittingRef.current = false;
   };
 
-  const pinnedMemos = memos.filter((memo) => memo.pinned);
-  const unpinnedMemos = memos.filter((memo) => !memo.pinned);
+  const pinnedMemos = memos.filter((memo) => memo.taskType === 'RECURRING');
+  const unpinnedMemos = memos.filter((memo) => memo.taskType !== 'RECURRING');
 
   const renderInput = () => (
     <TextInput
@@ -118,7 +137,7 @@ export default function MemoListScreen() {
     />
   );
 
-  const renderMemoRow = (memo: Memo) => {
+  const renderMemoRow = (memo: TaskResponse) => {
     if (editingId === memo.id) {
       return (
         <TextInput
@@ -140,9 +159,9 @@ export default function MemoListScreen() {
         overshootRight={false}
         renderRightActions={() => (
           <View style={styles.swipeActions}>
-            <Pressable style={styles.pinButton} onPress={() => handleTogglePin(memo.id)}>
+            <Pressable style={styles.pinButton} onPress={() => handleTogglePin(memo)}>
               <Image
-                source={memo.pinned ? pinFilledIcon : pinIcon}
+                source={memo.taskType === 'RECURRING' ? pinFilledIcon : pinIcon}
                 style={styles.actionIcon}
                 contentFit="contain"
               />
@@ -154,7 +173,7 @@ export default function MemoListScreen() {
         )}>
         <Pressable style={styles.memoCard} onPress={() => startEditing(memo)}>
           <View style={styles.memoCardContent}>
-            <Text style={styles.memoCardTitle}>{memo.title}</Text>
+            <Text style={styles.memoCardTitle}>{memo.content}</Text>
             <Text style={styles.memoCardTime}>{formatRelativeDays(memo.createdAt)}</Text>
           </View>
           <Pressable style={styles.challengeButton} onPress={handleChallenge}>
@@ -177,12 +196,18 @@ export default function MemoListScreen() {
       </View>
 
       <View style={styles.content}>
-        {isAdding && memos.length === 0 ? (
+        {loading ? (
+          <View style={styles.emptyState}>
+            <ActivityIndicator color={colors.primary.default} />
+          </View>
+        ) : isAdding && memos.length === 0 ? (
           <View style={styles.listWrapper}>{renderInput()}</View>
         ) : memos.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>
-              아직 적어둔 할 일이 없어요{'\n'}편하게 적어두고 나중에 꺼내 보세요 🌱
+              {error
+                ? '메모를 불러오지 못했어요'
+                : '아직 적어둔 할 일이 없어요\n편하게 적어두고 나중에 꺼내 보세요 🌱'}
             </Text>
           </View>
         ) : (
@@ -190,6 +215,7 @@ export default function MemoListScreen() {
             style={styles.scroll}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}>
+            {error && <Text style={styles.errorText}>요청을 처리하지 못했어요</Text>}
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>즐겨찾기</Text>
               {pinnedMemos.map(renderMemoRow)}
@@ -203,7 +229,7 @@ export default function MemoListScreen() {
         )}
       </View>
 
-      {!(isAdding && memos.length === 0) && (
+      {!loading && !(isAdding && memos.length === 0) && (
         <View style={[styles.addButtonWrapper, { paddingBottom: insets.bottom }]}>
           <Pressable style={styles.addButton} onPress={() => setIsAdding(true)}>
             <Ionicons name="add-circle" size={24} color={colors.primary.default} />
@@ -294,6 +320,11 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     ...typography.b3BodyRegular,
+    color: colors.text.tertiary,
+    textAlign: 'center',
+  },
+  errorText: {
+    ...typography.c1Caption,
     color: colors.text.tertiary,
     textAlign: 'center',
   },
