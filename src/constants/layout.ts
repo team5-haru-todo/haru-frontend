@@ -2,11 +2,14 @@ export const layout = {
   screenWidth: 390,
   screenHeight: 844,
   margin: 20,
+  contentWidth: 350,
   columns: 4,
+  gutter: 16,
+  columnWidth: 75.5,
   statusBarHeight: 54,
-  navBarHeight: 54,
-  homeIndicatorHeight: 50,
-  tabBarHeight: 80,
+  navBarHeight: 56,
+  homeIndicatorHeight: 34,
+  tabBarHeight: 88,
 };
 
 export const radius = {

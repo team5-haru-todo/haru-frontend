@@ -5,19 +5,25 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  SafeAreaView,
-  Switch,
+  Image,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 
 import { colors } from '@/src/constants/colors';
+import { layout } from '@/src/constants/layout';
+import { StatusBarSpacer } from '@/src/components/common/StatusBarSpacer';
+
+const ICON_AVATAR = require('../../assets/images/Icon/Avatar.png');
+const ICON_ARROW_RIGHT = require('../../assets/images/Icon/Arrow_right.png');
 
 export default function MyPageScreen() {
   const [pushEnabled, setPushEnabled] = useState(true);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
+      <StatusBar style="dark" />
+      <StatusBarSpacer />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
         {/* NavBar: h=56, "설정" 절대 가운데, border-bottom 2px #F7F7F7 */}
@@ -30,7 +36,11 @@ export default function MyPageScreen() {
           {/* Profile_Left: gap=12, items-center */}
           <View style={styles.profileLeft}>
             {/* Avatar: 74x74 */}
-            <View style={styles.avatar} />
+            <Image
+              source={ICON_AVATAR}
+              style={styles.avatar}
+              resizeMode="cover"
+            />
             {/* Group_ProfileText: gap=4 */}
             <View style={styles.profileTexts}>
               <Text style={styles.profileName}>김다은</Text>
@@ -61,14 +71,15 @@ export default function MyPageScreen() {
               <Text style={styles.listItemText}>푸쉬알림</Text>
               {/* iOS Toggle: w=51, h=31 */}
               {/* IOsToggle: w=51, h=31, borderRadius=16, track #65C466, knob 27x27 */}
-              <Switch
-                value={pushEnabled}
-                onValueChange={setPushEnabled}
-                trackColor={{ false: '#E8E9EC', true: '#65C466' }}
-                thumbColor="#FFFFFF"
-                ios_backgroundColor="#E8E9EC"
-                style={{ width: 51, height: 31 }}
-              />
+              <TouchableOpacity
+                accessibilityRole="switch"
+                accessibilityState={{ checked: pushEnabled }}
+                activeOpacity={0.8}
+                onPress={() => setPushEnabled((enabled) => !enabled)}
+                style={[styles.toggle, pushEnabled ? styles.toggleOn : styles.toggleOff]}
+              >
+                <View style={[styles.toggleKnob, pushEnabled ? styles.toggleKnobOn : styles.toggleKnobOff]} />
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -79,7 +90,7 @@ export default function MyPageScreen() {
             </View>
             <TouchableOpacity style={styles.listItem} activeOpacity={0.7}>
               <Text style={styles.listItemText}>문의하기</Text>
-              <Ionicons name="chevron-forward" size={24} color={colors.text.tertiary} />
+              <Image source={ICON_ARROW_RIGHT} style={styles.listIcon} />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.listItem}
@@ -87,7 +98,7 @@ export default function MyPageScreen() {
               onPress={() => router.push('/policy')}
             >
               <Text style={styles.listItemText}>약관 및 정책</Text>
-              <Ionicons name="chevron-forward" size={24} color={colors.text.tertiary} />
+              <Image source={ICON_ARROW_RIGHT} style={styles.listIcon} />
             </TouchableOpacity>
           </View>
 
@@ -104,14 +115,14 @@ export default function MyPageScreen() {
 
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
-  // 탭바 88px + 홈인디케이터 34px = 122px
-  scroll: { paddingBottom: 122 },
+  // Figma navigation_bar 88px already includes the bottom safe-area region.
+  scroll: { paddingBottom: layout.tabBarHeight },
 
   // NavBar: h=56, border-bottom 2px #F7F7F7, title absolutely centered
   navBar: {
@@ -154,7 +165,7 @@ const styles = StyleSheet.create({
   // Profile_Left: gap=12, items-center
   profileLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   // Avatar: 74x74
-  avatar: { width: 74, height: 74, borderRadius: 37, backgroundColor: '#D9D9D9' },
+  avatar: { width: 74, height: 74, borderRadius: 37 },
   // Group_ProfileText: gap=4
   profileTexts: { gap: 4 },
   // Name: SemiBold 18px, lineHeight 26, letterSpacing -0.5
@@ -251,6 +262,30 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     lineHeight: 24,
   },
+  listIcon: { width: 24, height: 24, resizeMode: 'contain' },
+  toggle: {
+    width: 51,
+    height: 31,
+    borderRadius: 16,
+    position: 'relative',
+  },
+  toggleOn: { backgroundColor: '#65C466' },
+  toggleOff: { backgroundColor: '#E8E9EC' },
+  toggleKnob: {
+    position: 'absolute',
+    top: 2,
+    width: 27,
+    height: 27,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 3.5,
+    elevation: 2,
+  },
+  toggleKnobOn: { right: 2 },
+  toggleKnobOff: { left: 2 },
   // Version right text: Regular 11px, lineHeight 14, tertiary
   versionText: {
     fontSize: 11,

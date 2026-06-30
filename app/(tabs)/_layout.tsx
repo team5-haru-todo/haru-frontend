@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { colors } from '@/src/constants/colors';
+import { layout } from '@/src/constants/layout';
 
 export default function TabLayout() {
   return (
@@ -19,7 +20,7 @@ export default function TabLayout() {
           borderTopWidth: 1,
           borderTopLeftRadius: 20,
           borderTopRightRadius: 20,
-          height: 88,
+          height: layout.tabBarHeight,
           paddingTop: 7,
           paddingBottom: 10,
           paddingHorizontal: 24,

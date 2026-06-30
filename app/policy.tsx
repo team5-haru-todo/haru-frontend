@@ -1,9 +1,14 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { router } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 
 import { colors } from '@/src/constants/colors';
+import { layout } from '@/src/constants/layout';
+import { StatusBarSpacer } from '@/src/components/common/StatusBarSpacer';
+
+const ICON_ARROW_LEFT = require('../assets/images/Icon/Arrow_left.png');
+const ICON_ARROW_RIGHT = require('../assets/images/Icon/Arrow_right.png');
 
 const ITEMS = [
   { key: 'terms', label: '(필수) 서비스 이용약관' },
@@ -13,11 +18,13 @@ const ITEMS = [
 
 export default function PolicyScreen() {
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
+      <StatusBar style="dark" />
+      <StatusBarSpacer />
       {/* NavBar: Arrow_left + 약관 및 정책 (centered abs) */}
       <View style={styles.navBar}>
         <TouchableOpacity onPress={() => router.back()} style={styles.navLeft} activeOpacity={0.7}>
-          <Ionicons name="chevron-back" size={24} color={colors.text.primary} />
+          <Image source={ICON_ARROW_LEFT} style={styles.icon} />
         </TouchableOpacity>
         <Text style={styles.navTitle}>약관 및 정책</Text>
       </View>
@@ -33,12 +40,12 @@ export default function PolicyScreen() {
               onPress={() => router.push({ pathname: '/policy-detail', params: { type: item.key } })}
             >
               <Text style={styles.listItemText}>{item.label}</Text>
-              <Ionicons name="chevron-forward" size={24} color={colors.text.tertiary} />
+              <Image source={ICON_ARROW_RIGHT} style={styles.icon} />
             </TouchableOpacity>
           ))}
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -76,6 +83,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 32,
     paddingHorizontal: 20,
+    paddingBottom: layout.homeIndicatorHeight,
     overflow: 'hidden',
   },
 
@@ -103,4 +111,5 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     lineHeight: 24,
   },
+  icon: { width: 24, height: 24, resizeMode: 'contain' },
 });
