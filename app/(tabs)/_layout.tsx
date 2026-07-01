@@ -1,10 +1,16 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Ionicons } from '@expo/vector-icons';
-
+import { Image } from 'react-native';
 import { HapticTab } from '@/components/haptic-tab';
 import { colors } from '@/src/constants/colors';
 import { layout } from '@/src/constants/layout';
+
+const ICON_HOME_ACTIVE = require('../../assets/images/Icon/Tab_Home_Active.png');
+const ICON_HOME_INACTIVE = require('../../assets/images/Icon/Tab_Home_Inactive.png');
+const ICON_CALENDAR_ACTIVE = require('../../assets/images/Icon/Tab_Calendar_Active.png');
+const ICON_CALENDAR_INACTIVE = require('../../assets/images/Icon/Tab_Calendar_Inactive.png');
+const ICON_MYPAGE_ACTIVE = require('../../assets/images/Icon/Tab_Mypage_Active.png');
+const ICON_MYPAGE_INACTIVE = require('../../assets/images/Icon/Tab_Mypage_Inactive.png');
 
 export default function TabLayout() {
   return (
@@ -16,21 +22,19 @@ export default function TabLayout() {
         tabBarButton: HapticTab,
         tabBarStyle: {
           backgroundColor: '#FFFFFF',
-          borderTopColor: '#E5E5E5',
+          borderTopColor: colors.button.disabled,
           borderTopWidth: 1,
-          borderTopLeftRadius: 20,
-          borderTopRightRadius: 20,
           height: layout.tabBarHeight,
           paddingTop: 7,
-          paddingBottom: 10,
+          paddingBottom: 25,
           paddingHorizontal: 24,
           position: 'absolute',
         },
         tabBarItemStyle: {
           width: 56,
           height: 56,
-          paddingTop: 8,
-          paddingBottom: 6,
+          justifyContent: 'flex-start',
+          paddingTop: 0,
         },
         tabBarLabelStyle: {
           fontSize: 11,
@@ -43,7 +47,12 @@ export default function TabLayout() {
         name="index"
         options={{
           title: '홈',
-          tabBarIcon: ({ color }) => <Ionicons name="home-outline" size={24} color={color} />,
+          tabBarIcon: ({ focused }) => (
+            <Image
+              source={focused ? ICON_HOME_ACTIVE : ICON_HOME_INACTIVE}
+              style={{ width: 24, height: 24, resizeMode: 'contain' }}
+            />
+          ),
         }}
       />
       <Tabs.Screen
@@ -54,14 +63,24 @@ export default function TabLayout() {
         name="calendar"
         options={{
           title: '캘린더',
-          tabBarIcon: ({ color }) => <Ionicons name="calendar-outline" size={24} color={color} />,
+          tabBarIcon: ({ focused }) => (
+            <Image
+              source={focused ? ICON_CALENDAR_ACTIVE : ICON_CALENDAR_INACTIVE}
+              style={{ width: 24, height: 24, resizeMode: 'contain' }}
+            />
+          ),
         }}
       />
       <Tabs.Screen
         name="mypage"
         options={{
           title: '마이페이지',
-          tabBarIcon: ({ color }) => <Ionicons name="person-outline" size={24} color={color} />,
+          tabBarIcon: ({ focused }) => (
+            <Image
+              source={focused ? ICON_MYPAGE_ACTIVE : ICON_MYPAGE_INACTIVE}
+              style={{ width: 24, height: 24, resizeMode: 'contain' }}
+            />
+          ),
         }}
       />
     </Tabs>
