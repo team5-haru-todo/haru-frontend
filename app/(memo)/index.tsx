@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
-import ReorderableList, { reorderItems, useReorderableDrag } from 'react-native-reorderable-list';
+import ReorderableList, { useReorderableDrag } from 'react-native-reorderable-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { TaskResponse } from '@/src/api/task';
@@ -105,14 +105,14 @@ function DraggableMemoRow(props: MemoRowProps) {
 export default function MemoListScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { memos, loading, error, addMemo, editMemo, removeMemo, toggleMemoRecurring } = useMemos();
+  const { memos, loading, error, addMemo, editMemo, removeMemo, toggleMemoRecurring, reorderMemos } =
+    useMemos();
   const [isAdding, setIsAdding] = useState(false);
   const [memoText, setMemoText] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editText, setEditText] = useState('');
-  const [orderedUnpinned, setOrderedUnpinned] = useState<TaskResponse[]>([]);
   const toastOpacity = useRef(new Animated.Value(0)).current;
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const editSubmittingRef = useRef(false);
@@ -125,13 +125,8 @@ export default function MemoListScreen() {
     };
   }, []);
 
-  // PoC: 서버 목록이 갱신되면 로컬 순서를 다시 맞춘다 (아직 순서 저장 API는 미연결)
-  useEffect(() => {
-    setOrderedUnpinned(memos.filter((memo) => memo.taskType !== 'RECURRING'));
-  }, [memos]);
-
   const handleReorder = ({ from, to }: { from: number; to: number }) => {
-    setOrderedUnpinned((prev) => reorderItems(prev, from, to));
+    reorderMemos(from, to);
   };
 
   const handleChallenge = () => {
@@ -206,6 +201,7 @@ export default function MemoListScreen() {
   };
 
   const pinnedMemos = memos.filter((memo) => memo.taskType === 'RECURRING');
+  const unpinnedMemos = memos.filter((memo) => memo.taskType !== 'RECURRING');
 
   const renderInput = () => (
     <TextInput
@@ -259,7 +255,7 @@ export default function MemoListScreen() {
           </View>
         ) : (
           <ReorderableList
-            data={orderedUnpinned}
+            data={unpinnedMemos}
             keyExtractor={(item) => String(item.id)}
             onReorder={handleReorder}
             style={styles.scroll}

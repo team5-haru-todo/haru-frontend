@@ -6,6 +6,7 @@ import {
   deleteTask,
   getTasks,
   updateTask,
+  updateTaskOrder,
 } from '@/src/api/task';
 import type { TaskResponse } from '@/src/api/task';
 
@@ -95,6 +96,37 @@ export function useMemos() {
     }
   }, []);
 
+  // 전체(GENERAL) 섹션 안에서 from → to로 순서를 옮기고 서버에 저장한다.
+  // displayOrder는 즐겨찾기(먼저) → 전체 순으로 0부터 다시 매긴다.
+  const reorderMemos = useCallback(
+    async (from: number, to: number) => {
+      setError(null);
+      const previous = memos;
+      const pinned = memos.filter((memo) => memo.taskType === 'RECURRING');
+      const unpinned = memos.filter((memo) => memo.taskType !== 'RECURRING');
+      const reordered = [...unpinned];
+      const [moved] = reordered.splice(from, 1);
+      reordered.splice(to, 0, moved);
+      const merged = [...pinned, ...reordered].map((memo, index) => ({
+        ...memo,
+        displayOrder: index,
+      }));
+      setMemos(merged); // 낙관적 반영
+      try {
+        await updateTaskOrder(
+          merged.map((memo) => ({ taskId: memo.id, displayOrder: memo.displayOrder }))
+        );
+        return true;
+      } catch (reorderError) {
+        console.error('메모 순서 변경 실패:', reorderError);
+        setMemos(previous); // 실패 시 롤백
+        setError(getErrorMessage(reorderError));
+        return false;
+      }
+    },
+    [memos]
+  );
+
   return {
     memos,
     loading,
@@ -104,5 +136,6 @@ export function useMemos() {
     editMemo,
     removeMemo,
     toggleMemoRecurring,
+    reorderMemos,
   };
 }
