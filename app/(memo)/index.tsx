@@ -5,7 +5,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
-import ReorderableList, { useReorderableDrag } from 'react-native-reorderable-list';
+import {
+  NestableDraggableFlatList,
+  NestableScrollContainer,
+  type RenderItemParams,
+} from 'react-native-draggable-flatlist';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { TaskResponse } from '@/src/api/task';
@@ -97,16 +101,19 @@ function MemoRow({
   );
 }
 
-function DraggableMemoRow(props: MemoRowProps) {
-  const drag = useReorderableDrag();
-  return <MemoRow {...props} onLongPress={drag} />;
-}
-
 export default function MemoListScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { memos, loading, error, addMemo, editMemo, removeMemo, toggleMemoRecurring, reorderMemos } =
-    useMemos();
+  const {
+    memos,
+    loading,
+    error,
+    addMemo,
+    editMemo,
+    removeMemo,
+    toggleMemoRecurring,
+    reorderMemosByType,
+  } = useMemos();
   const [isAdding, setIsAdding] = useState(false);
   const [memoText, setMemoText] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
@@ -124,10 +131,6 @@ export default function MemoListScreen() {
       }
     };
   }, []);
-
-  const handleReorder = ({ from, to }: { from: number; to: number }) => {
-    reorderMemos(from, to);
-  };
 
   const handleChallenge = () => {
     if (toastTimeoutRef.current) {
@@ -227,6 +230,12 @@ export default function MemoListScreen() {
     onChallenge: handleChallenge,
   };
 
+  const renderDraggableRow = ({ item, drag }: RenderItemParams<TaskResponse>) => (
+    <View style={styles.dragItem}>
+      <MemoRow memo={item} isEditing={editingId === item.id} onLongPress={drag} {...memoRowHandlers} />
+    </View>
+  );
+
   return (
     <View style={styles.root}>
       <View style={[styles.navBar, { paddingTop: insets.top }]}>
@@ -254,45 +263,33 @@ export default function MemoListScreen() {
             </Text>
           </View>
         ) : (
-          <ReorderableList
-            data={unpinnedMemos}
-            keyExtractor={(item) => String(item.id)}
-            onReorder={handleReorder}
+          <NestableScrollContainer
             style={styles.scroll}
-            contentContainerStyle={styles.reorderContent}
-            showsVerticalScrollIndicator={false}
-            ListHeaderComponent={
-              <View style={styles.listHeader}>
-                {error && <Text style={styles.errorText}>요청을 처리하지 못했어요</Text>}
-                {pinnedMemos.length > 0 && (
-                  <View style={styles.section}>
-                    <Text style={styles.sectionLabel}>즐겨찾기</Text>
-                    {pinnedMemos.map((memo) => (
-                      <MemoRow
-                        key={memo.id}
-                        memo={memo}
-                        isEditing={editingId === memo.id}
-                        {...memoRowHandlers}
-                      />
-                    ))}
-                  </View>
-                )}
-                <View style={styles.section}>
-                  <Text style={styles.sectionLabel}>전체</Text>
-                  {isAdding && renderInput()}
-                </View>
-              </View>
-            }
-            renderItem={({ item }) => (
-              <View style={styles.reorderItem}>
-                <DraggableMemoRow
-                  memo={item}
-                  isEditing={editingId === item.id}
-                  {...memoRowHandlers}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}>
+            {error && <Text style={styles.errorText}>요청을 처리하지 못했어요</Text>}
+            {pinnedMemos.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionLabel}>즐겨찾기</Text>
+                <NestableDraggableFlatList
+                  data={pinnedMemos}
+                  keyExtractor={(item) => String(item.id)}
+                  onDragEnd={({ data }) => reorderMemosByType('RECURRING', data)}
+                  renderItem={renderDraggableRow}
                 />
               </View>
             )}
-          />
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>전체</Text>
+              {isAdding && renderInput()}
+              <NestableDraggableFlatList
+                data={unpinnedMemos}
+                keyExtractor={(item) => String(item.id)}
+                onDragEnd={({ data }) => reorderMemosByType('GENERAL', data)}
+                renderItem={renderDraggableRow}
+              />
+            </View>
+          </NestableScrollContainer>
         )}
       </View>
 
@@ -403,14 +400,11 @@ const styles = StyleSheet.create({
   scroll: {
     flex: 1,
   },
-  listHeader: {
+  scrollContent: {
     gap: 24,
-  },
-  reorderContent: {
     paddingBottom: 10,
   },
-  reorderItem: {
-    paddingHorizontal: 10,
+  dragItem: {
     marginBottom: 8,
   },
   section: {

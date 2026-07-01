@@ -8,7 +8,7 @@ import {
   updateTask,
   updateTaskOrder,
 } from '@/src/api/task';
-import type { TaskResponse } from '@/src/api/task';
+import type { TaskResponse, TaskType } from '@/src/api/task';
 
 function sortTasks(tasks: TaskResponse[]) {
   return [...tasks].sort((a, b) => a.displayOrder - b.displayOrder);
@@ -96,18 +96,17 @@ export function useMemos() {
     }
   }, []);
 
-  // 전체(GENERAL) 섹션 안에서 from → to로 순서를 옮기고 서버에 저장한다.
+  // 한 섹션(RECURRING 또는 GENERAL)의 재정렬된 배열을 받아 서버에 저장한다.
   // displayOrder는 즐겨찾기(먼저) → 전체 순으로 0부터 다시 매긴다.
-  const reorderMemos = useCallback(
-    async (from: number, to: number) => {
+  const reorderMemosByType = useCallback(
+    async (taskType: TaskType, reordered: TaskResponse[]) => {
       setError(null);
       const previous = memos;
-      const pinned = memos.filter((memo) => memo.taskType === 'RECURRING');
-      const unpinned = memos.filter((memo) => memo.taskType !== 'RECURRING');
-      const reordered = [...unpinned];
-      const [moved] = reordered.splice(from, 1);
-      reordered.splice(to, 0, moved);
-      const merged = [...pinned, ...reordered].map((memo, index) => ({
+      const pinned =
+        taskType === 'RECURRING' ? reordered : memos.filter((memo) => memo.taskType === 'RECURRING');
+      const unpinned =
+        taskType === 'GENERAL' ? reordered : memos.filter((memo) => memo.taskType !== 'RECURRING');
+      const merged = [...pinned, ...unpinned].map((memo, index) => ({
         ...memo,
         displayOrder: index,
       }));
@@ -136,6 +135,6 @@ export function useMemos() {
     editMemo,
     removeMemo,
     toggleMemoRecurring,
-    reorderMemos,
+    reorderMemosByType,
   };
 }
