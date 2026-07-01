@@ -15,6 +15,11 @@ export interface UserSettingsResponse {
   timezone: string;
 }
 
+export interface WithdrawRequest {
+  reasons: string[];
+  etcReason?: string;
+}
+
 export async function getMe(): Promise<UserResponse> {
   const response = await apiClient.get('/api/users/me');
   return response.data.data;
@@ -28,4 +33,8 @@ export async function getMySettings(): Promise<UserSettingsResponse> {
 export async function updateMySettings(pushEnabled: boolean): Promise<UserSettingsResponse> {
   const response = await apiClient.patch('/api/users/me/settings', { pushEnabled });
   return response.data.data;
+}
+
+export async function withdraw(request: WithdrawRequest): Promise<void> {
+  await apiClient.post('/api/users/me/withdraw', request);
 }
