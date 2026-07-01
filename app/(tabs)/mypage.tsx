@@ -17,7 +17,7 @@ import { StatusBarSpacer } from '@/src/components/common/StatusBarSpacer';
 import { getMe, getMySettings, updateMySettings, UserResponse } from '@/src/api/user';
 
 const ICON_AVATAR = require('../../assets/images/Icon/Avatar.png');
-const ICON_ARROW_RIGHT = require('../../assets/images/Icon/Arrow_right.png');
+const ICON_ARROW_RIGHT = require('../../assets/images/Icon/Arrow_Right_xs.png');
 
 export default function MyPageScreen() {
   const [user, setUser] = useState<UserResponse | null>(null);
@@ -300,6 +300,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: 'Pretendard-Regular',
     color: colors.text.tertiary,
-    lineHeight: 14,
+    lineHeight: 24,
   },
 });
