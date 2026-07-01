@@ -12,18 +12,15 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
-
   const [fontsLoaded] = useFonts({
     'Pretendard-Regular': require('../assets/fonts/Pretendard-Regular.otf'),
     'Pretendard-Medium': require('../assets/fonts/Pretendard-Medium.otf'),
     'Pretendard-SemiBold': require('../assets/fonts/Pretendard-SemiBold.otf'),
     'Pretendard-Bold': require('../assets/fonts/Pretendard-Bold.otf'),
   });
-
   if (!fontsLoaded) {
     return null;
   }
-
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
@@ -34,7 +31,9 @@ export default function RootLayout() {
           <Stack.Screen name="(memo)" options={{ headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
           <Stack.Screen name="policy" options={{ headerShown: false }} />
-        <Stack.Screen name="policy-detail" options={{ headerShown: false }} />
+          <Stack.Screen name="policy-detail" options={{ headerShown: false }} />
+          <Stack.Screen name="account-management" options={{ headerShown: false }} />
+          <Stack.Screen name="withdrawal" options={{ headerShown: false }} />
         </Stack>
         <StatusBar style="auto" />
       </ThemeProvider>
