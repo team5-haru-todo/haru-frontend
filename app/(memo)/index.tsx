@@ -4,7 +4,8 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { ScrollView, Swipeable } from 'react-native-gesture-handler';
+import { Swipeable } from 'react-native-gesture-handler';
+import ReorderableList, { reorderItems, useReorderableDrag } from 'react-native-reorderable-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { TaskResponse } from '@/src/api/task';
@@ -27,6 +28,80 @@ function formatRelativeDays(createdAt: string) {
   return days <= 0 ? '오늘' : `${days}일 전`;
 }
 
+type MemoRowProps = {
+  memo: TaskResponse;
+  isEditing: boolean;
+  editText: string;
+  onChangeEdit: (text: string) => void;
+  onSubmitEdit: () => void;
+  onStartEdit: (memo: TaskResponse) => void;
+  onTogglePin: (memo: TaskResponse) => void;
+  onRequestDelete: (id: number) => void;
+  onChallenge: () => void;
+  onLongPress?: () => void;
+};
+
+function MemoRow({
+  memo,
+  isEditing,
+  editText,
+  onChangeEdit,
+  onSubmitEdit,
+  onStartEdit,
+  onTogglePin,
+  onRequestDelete,
+  onChallenge,
+  onLongPress,
+}: MemoRowProps) {
+  if (isEditing) {
+    return (
+      <TextInput
+        style={styles.input}
+        value={editText}
+        onChangeText={onChangeEdit}
+        onSubmitEditing={onSubmitEdit}
+        onBlur={onSubmitEdit}
+        returnKeyType="done"
+        cursorColor={colors.primary.default}
+        autoFocus
+      />
+    );
+  }
+  return (
+    <Swipeable
+      overshootRight={false}
+      renderRightActions={() => (
+        <View style={styles.swipeActions}>
+          <Pressable style={styles.pinButton} onPress={() => onTogglePin(memo)}>
+            <Image
+              source={memo.taskType === 'RECURRING' ? pinFilledIcon : pinIcon}
+              style={styles.actionIcon}
+              contentFit="contain"
+            />
+          </Pressable>
+          <Pressable style={styles.deleteButton} onPress={() => onRequestDelete(memo.id)}>
+            <Image source={trashIcon} style={styles.actionIcon} contentFit="contain" />
+          </Pressable>
+        </View>
+      )}>
+      <Pressable style={styles.memoCard} onPress={() => onStartEdit(memo)} onLongPress={onLongPress}>
+        <View style={styles.memoCardContent}>
+          <Text style={styles.memoCardTitle}>{memo.content}</Text>
+          <Text style={styles.memoCardTime}>{formatRelativeDays(memo.createdAt)}</Text>
+        </View>
+        <Pressable style={styles.challengeButton} onPress={onChallenge}>
+          <Text style={styles.challengeButtonLabel}>도전</Text>
+        </Pressable>
+      </Pressable>
+    </Swipeable>
+  );
+}
+
+function DraggableMemoRow(props: MemoRowProps) {
+  const drag = useReorderableDrag();
+  return <MemoRow {...props} onLongPress={drag} />;
+}
+
 export default function MemoListScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -37,6 +112,7 @@ export default function MemoListScreen() {
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editText, setEditText] = useState('');
+  const [orderedUnpinned, setOrderedUnpinned] = useState<TaskResponse[]>([]);
   const toastOpacity = useRef(new Animated.Value(0)).current;
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const editSubmittingRef = useRef(false);
@@ -48,6 +124,15 @@ export default function MemoListScreen() {
       }
     };
   }, []);
+
+  // PoC: 서버 목록이 갱신되면 로컬 순서를 다시 맞춘다 (아직 순서 저장 API는 미연결)
+  useEffect(() => {
+    setOrderedUnpinned(memos.filter((memo) => memo.taskType !== 'RECURRING'));
+  }, [memos]);
+
+  const handleReorder = ({ from, to }: { from: number; to: number }) => {
+    setOrderedUnpinned((prev) => reorderItems(prev, from, to));
+  };
 
   const handleChallenge = () => {
     if (toastTimeoutRef.current) {
@@ -121,7 +206,6 @@ export default function MemoListScreen() {
   };
 
   const pinnedMemos = memos.filter((memo) => memo.taskType === 'RECURRING');
-  const unpinnedMemos = memos.filter((memo) => memo.taskType !== 'RECURRING');
 
   const renderInput = () => (
     <TextInput
@@ -137,51 +221,14 @@ export default function MemoListScreen() {
     />
   );
 
-  const renderMemoRow = (memo: TaskResponse) => {
-    if (editingId === memo.id) {
-      return (
-        <TextInput
-          key={memo.id}
-          style={styles.input}
-          value={editText}
-          onChangeText={setEditText}
-          onSubmitEditing={handleSubmitEdit}
-          onBlur={handleSubmitEdit}
-          returnKeyType="done"
-          cursorColor={colors.primary.default}
-          autoFocus
-        />
-      );
-    }
-    return (
-      <Swipeable
-        key={memo.id}
-        overshootRight={false}
-        renderRightActions={() => (
-          <View style={styles.swipeActions}>
-            <Pressable style={styles.pinButton} onPress={() => handleTogglePin(memo)}>
-              <Image
-                source={memo.taskType === 'RECURRING' ? pinFilledIcon : pinIcon}
-                style={styles.actionIcon}
-                contentFit="contain"
-              />
-            </Pressable>
-            <Pressable style={styles.deleteButton} onPress={() => setPendingDeleteId(memo.id)}>
-              <Image source={trashIcon} style={styles.actionIcon} contentFit="contain" />
-            </Pressable>
-          </View>
-        )}>
-        <Pressable style={styles.memoCard} onPress={() => startEditing(memo)}>
-          <View style={styles.memoCardContent}>
-            <Text style={styles.memoCardTitle}>{memo.content}</Text>
-            <Text style={styles.memoCardTime}>{formatRelativeDays(memo.createdAt)}</Text>
-          </View>
-          <Pressable style={styles.challengeButton} onPress={handleChallenge}>
-            <Text style={styles.challengeButtonLabel}>도전</Text>
-          </Pressable>
-        </Pressable>
-      </Swipeable>
-    );
+  const memoRowHandlers = {
+    editText,
+    onChangeEdit: setEditText,
+    onSubmitEdit: handleSubmitEdit,
+    onStartEdit: startEditing,
+    onTogglePin: handleTogglePin,
+    onRequestDelete: setPendingDeleteId,
+    onChallenge: handleChallenge,
   };
 
   return (
@@ -211,21 +258,45 @@ export default function MemoListScreen() {
             </Text>
           </View>
         ) : (
-          <ScrollView
+          <ReorderableList
+            data={orderedUnpinned}
+            keyExtractor={(item) => String(item.id)}
+            onReorder={handleReorder}
             style={styles.scroll}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}>
-            {error && <Text style={styles.errorText}>요청을 처리하지 못했어요</Text>}
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>즐겨찾기</Text>
-              {pinnedMemos.map(renderMemoRow)}
-            </View>
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>전체</Text>
-              {isAdding && renderInput()}
-              {unpinnedMemos.map(renderMemoRow)}
-            </View>
-          </ScrollView>
+            contentContainerStyle={styles.reorderContent}
+            showsVerticalScrollIndicator={false}
+            ListHeaderComponent={
+              <View style={styles.listHeader}>
+                {error && <Text style={styles.errorText}>요청을 처리하지 못했어요</Text>}
+                {pinnedMemos.length > 0 && (
+                  <View style={styles.section}>
+                    <Text style={styles.sectionLabel}>즐겨찾기</Text>
+                    {pinnedMemos.map((memo) => (
+                      <MemoRow
+                        key={memo.id}
+                        memo={memo}
+                        isEditing={editingId === memo.id}
+                        {...memoRowHandlers}
+                      />
+                    ))}
+                  </View>
+                )}
+                <View style={styles.section}>
+                  <Text style={styles.sectionLabel}>전체</Text>
+                  {isAdding && renderInput()}
+                </View>
+              </View>
+            }
+            renderItem={({ item }) => (
+              <View style={styles.reorderItem}>
+                <DraggableMemoRow
+                  memo={item}
+                  isEditing={editingId === item.id}
+                  {...memoRowHandlers}
+                />
+              </View>
+            )}
+          />
         )}
       </View>
 
@@ -336,8 +407,15 @@ const styles = StyleSheet.create({
   scroll: {
     flex: 1,
   },
-  scrollContent: {
+  listHeader: {
     gap: 24,
+  },
+  reorderContent: {
+    paddingBottom: 10,
+  },
+  reorderItem: {
+    paddingHorizontal: 10,
+    marginBottom: 8,
   },
   section: {
     width: '100%',
