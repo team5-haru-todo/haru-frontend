@@ -1,98 +1,203 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  SafeAreaView,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+} from 'react-native';
+import { useState } from 'react';
+import { LinearGradient } from 'expo-linear-gradient';
+import { colors } from '@/src/constants/colors';
+import { typography } from '@/src/constants/typography';
+import { spacing } from '@/src/constants/layout';
+import { EmptyState } from '@/src/components/main/EmptyState';
+import { TodayTaskCard } from '@/src/components/main/TodayTaskCard';
+import { CheckButton } from '@/src/components/main/CheckButton';
+import { StreakBadge } from '@/src/components/main/StreakBadge';
+import { CompletionCelebration } from '@/src/components/main/CompletionCelebration';
+import { CompletionMessage } from '@/src/components/main/CompletionMessage';
+import { NotificationPermissionModal } from '@/src/components/main/NotificationPermissionModal';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+type MainState = 'empty' | 'selected' | 'editing' | 'celebrating' | 'completed';
 
-export default function HomeScreen() {
+// TODO: 백엔드 record 도메인 API 명세 확정 후 실제 데이터로 교체
+const DUMMY_STREAK = 3;
+const DUMMY_TODAY_DAY_INDEX = 2; // 0=월 ~ 6=일, 2=수요일
+const DUMMY_COMPLETED_DAYS = [true, true, true, false, false, false, false];
+
+export default function MainScreen() {
+  // TODO: 백엔드 user 도메인에서 신규 사용자 여부 확인 후 초기값 교체
+  const [showNotificationModal, setShowNotificationModal] = useState(true);
+  const [mainState, setMainState] = useState<MainState>('empty');
+  const [taskContent, setTaskContent] = useState('');
+  const [editingText, setEditingText] = useState('');
+
+  const today = new Date().toLocaleDateString('ko-KR', {
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long',
+  });
+
+  const handleSubmitTask = (text: string) => {
+    setTaskContent(text);
+    setMainState('selected');
+  };
+
+  const handlePressEdit = () => {
+    setEditingText(taskContent);
+    setMainState('editing');
+  };
+
+  const handleComplete = () => {
+    // TODO: 백엔드 record 도메인 완료 처리 API 확정 후 연결
+    if (mainState === 'editing' && editingText.trim()) {
+      setTaskContent(editingText.trim());
+    }
+    setMainState('celebrating');
+  };
+
+  const handleBlurEdit = () => {
+    // TODO: 백엔드 task/record 수정 API 확정 후 실제 저장 로직 연결
+    if (editingText.trim()) {
+      setTaskContent(editingText.trim());
+    }
+    setMainState('selected');
+  };
+
+  const handleShare = () => {
+    // TODO: 카카오톡 공유 SDK 연동 후 실제 구현
+  };
+
+  const handleConfirm = () => {
+    setMainState('completed');
+  };
+
+  const handleExtra = () => {
+    // TODO: 추가 완료 화면 라우팅 연결
+  };
+
+  const handleSkipNotification = () => {
+    setShowNotificationModal(false);
+  };
+
+  const handleAgreeNotification = () => {
+    // TODO: 알림 권한 요청 (expo-notifications requestPermissionsAsync)
+    // TODO: 기기 토큰 등록 API 연결 (notification 도메인 POST /device-tokens)
+    // TODO: 사용자 알림 설정 저장 (user 도메인 PATCH /users/settings)
+    setShowNotificationModal(false);
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <LinearGradient
+      colors={['#FFFFFF', '#E6F4FF']}
+      style={styles.gradient}
+    >
+      <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <Text style={styles.dateLabel}>{today}</Text>
+            <StreakBadge count={DUMMY_STREAK} />
+          </View>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+          <View style={styles.body}>
+            {mainState === 'empty' && (
+              <EmptyState onSubmit={handleSubmitTask} />
+            )}
+
+            {mainState === 'selected' && (
+              <View style={styles.taskArea}>
+                <TodayTaskCard
+                  content={taskContent}
+                  isEditing={false}
+                  onPressEdit={handlePressEdit}
+                />
+                <CheckButton onPress={handleComplete} />
+              </View>
+            )}
+
+            {mainState === 'editing' && (
+              <View style={styles.taskArea}>
+                <TodayTaskCard
+                  content={editingText}
+                  isEditing={true}
+                  onPressEdit={handlePressEdit}
+                  onChangeText={setEditingText}
+                  onBlur={handleBlurEdit}
+                />
+                <CheckButton onPress={handleComplete} />
+              </View>
+            )}
+
+            {mainState === 'celebrating' && (
+              <CompletionCelebration
+                taskContent={taskContent}
+                streakCount={DUMMY_STREAK}
+                todayDayIndex={DUMMY_TODAY_DAY_INDEX}
+                completedDays={DUMMY_COMPLETED_DAYS}
+                onShare={handleShare}
+                onConfirm={handleConfirm}
+              />
+            )}
+
+            {mainState === 'completed' && (
+              <CompletionMessage
+                taskContent={taskContent}
+                streakCount={DUMMY_STREAK}
+                todayDayIndex={DUMMY_TODAY_DAY_INDEX}
+                completedDays={DUMMY_COMPLETED_DAYS}
+                onExtra={handleExtra}
+              />
+            )}
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+      </SafeAreaView>
+      <NotificationPermissionModal
+        visible={showNotificationModal}
+        onSkip={handleSkipNotification}
+        onAgree={handleAgreeNotification}
+      />
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  flex: {
+    flex: 1,
+  },
+  gradient: {
+    flex: 1,
+  },
+  safeArea: {
+    flex: 1,
+  },
+  container: {
+    flex: 1,
+    paddingHorizontal: spacing.xl,
+  },
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'space-between',
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.lg,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  dateLabel: {
+    ...typography.t2Title2,
+    color: colors.text.primary,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  body: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingBottom: spacing.xxxl,
+  },
+  taskArea: {
+    gap: spacing.lg,
+    alignItems: 'center',
   },
 });
