@@ -12,6 +12,7 @@ import {
 } from 'react-native-draggable-flatlist';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { setTodayTask } from '@/src/api/record';
 import type { TaskResponse } from '@/src/api/task';
 import { useMemos } from '@/src/hooks/useMemos';
 import { colors, radius, spacing, typography } from '@/src/constants';
@@ -41,7 +42,7 @@ type MemoRowProps = {
   onStartEdit: (memo: TaskResponse) => void;
   onTogglePin: (memo: TaskResponse) => void;
   onRequestDelete: (id: number) => void;
-  onChallenge: () => void;
+  onChallenge: (memo: TaskResponse) => void;
   onLongPress?: () => void;
 };
 
@@ -93,7 +94,7 @@ function MemoRow({
           <Text style={styles.memoCardTitle}>{memo.content}</Text>
           <Text style={styles.memoCardTime}>{formatRelativeDays(memo.createdAt)}</Text>
         </View>
-        <Pressable style={styles.challengeButton} onPress={onChallenge}>
+        <Pressable style={styles.challengeButton} onPress={() => onChallenge(memo)}>
           <Text style={styles.challengeButtonLabel}>도전</Text>
         </Pressable>
       </Pressable>
@@ -132,7 +133,7 @@ export default function MemoListScreen() {
     };
   }, []);
 
-  const handleChallenge = () => {
+  const showChallengeToast = () => {
     if (toastTimeoutRef.current) {
       clearTimeout(toastTimeoutRef.current);
     }
@@ -145,6 +146,18 @@ export default function MemoListScreen() {
         useNativeDriver: true,
       }).start(() => setToastVisible(false));
     }, TOAST_VISIBLE_MS);
+  };
+
+  // 도전 = 이 할 일을 오늘의 한 개로 설정 (record 도메인)
+  // TODO: 성공 시 메인으로 이동 + 전역 토스트 (네비게이션/토스트는 조율 후 별도 작업)
+  const handleChallenge = async (memo: TaskResponse) => {
+    try {
+      await setTodayTask(memo.id);
+    } catch (challengeError) {
+      console.error('오늘의 한 개 설정 실패:', challengeError);
+      return;
+    }
+    showChallengeToast();
   };
 
   const handleSubmitMemo = async () => {
