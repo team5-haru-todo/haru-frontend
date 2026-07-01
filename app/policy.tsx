@@ -23,10 +23,21 @@ export default function PolicyScreen() {
       <StatusBarSpacer />
       {/* NavBar: Arrow_left + 약관 및 정책 (centered abs) */}
       <View style={styles.navBar}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.navLeft} activeOpacity={0.7}>
+        <TouchableOpacity
+          onPress={() => {
+            console.log('화살표 눌림!');
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace('/(tabs)/mypage');
+            }
+          }}
+          style={styles.navLeft}
+          activeOpacity={0.7}
+        >
           <Image source={ICON_ARROW_LEFT} style={styles.icon} />
         </TouchableOpacity>
-        <Text style={styles.navTitle}>약관 및 정책</Text>
+        <Text style={styles.navTitle} pointerEvents="none">약관 및 정책</Text>
       </View>
 
       {/* Content_Area: pt=32, px=20 */}
@@ -54,6 +65,7 @@ const styles = StyleSheet.create({
 
   // NavBar: h=56, border-bottom 2px #F7F7F7, px=20
   navBar: {
+    position: 'relative',
     height: 56,
     flexDirection: 'row',
     alignItems: 'center',
@@ -63,7 +75,13 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F7F7F7',
     backgroundColor: '#FFFFFF',
   },
-  navLeft: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
+  navLeft: {
+    width: 44,
+    height: 44,
+    marginLeft: -10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   navTitle: {
     position: 'absolute',
     left: 0,
