@@ -28,7 +28,6 @@ export function EmptyState({ onSubmit }: Props) {
 
       <View style={styles.inputActionGroup}>
         <View style={styles.inputRow}>
-          {!hasText && <View style={styles.cursor} />}
           <TextInput
             style={styles.input}
             value={inputText}
@@ -101,12 +100,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     width: "100%",
     minHeight: 48,
-  },
-  cursor: {
-    width: 2,
-    height: 24,
-    backgroundColor: colors.text.placeholder,
-    marginRight: spacing.xs,
   },
   input: {
     ...typography.b3BodyRegular,

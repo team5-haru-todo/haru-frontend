@@ -35,15 +35,23 @@ export default function MainScreen() {
   const [mainState, setMainState] = useState<MainState>("empty");
   const [taskContent, setTaskContent] = useState("");
   const [editingText, setEditingText] = useState("");
-  // TODO: API 연결 전 더미 흐름 — completion.tsx에서 확인 버튼을 누르면 completed 파라미터를 넘겨받는다.
-  const { completed } = useLocalSearchParams<{ completed?: string }>();
+  // TODO: API 연결 전 더미 흐름 — completion.tsx에서 확인 버튼을 누르면 completed/taskContent 파라미터를 넘겨받는다.
+  // router.replace로 이 화면이 remount될 경우 taskContent local state가 초기화되므로,
+  // completed와 함께 넘어온 taskContent param으로 복구한다. 전역 store 도입 전 임시 조치.
+  const { completed, taskContent: taskContentParam } = useLocalSearchParams<{
+    completed?: string;
+    taskContent?: string;
+  }>();
 
   useEffect(() => {
     if (completed) {
       setMainState("completed");
-      router.setParams({ completed: undefined });
+      if (taskContentParam) {
+        setTaskContent(taskContentParam);
+      }
+      router.setParams({ completed: undefined, taskContent: undefined });
     }
-  }, [completed]);
+  }, [completed, taskContentParam]);
 
   const today = new Date().toLocaleDateString("ko-KR", {
     month: "long",

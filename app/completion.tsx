@@ -19,8 +19,13 @@ export default function CompletionScreen() {
   };
 
   const handleConfirm = () => {
-    // TODO: API 연결 전 더미 흐름 — completed 여부를 route params로 (tabs)에 전달한다.
-    router.replace({ pathname: '/(tabs)', params: { completed: '1' } });
+    // TODO: API 연결 전 더미 흐름 — completed 여부와 taskContent를 route params로 (tabs)에 전달한다.
+    // router.replace로 (tabs)가 remount되면 MainScreen의 taskContent local state가 초기화되므로
+    // taskContent를 params로 함께 실어 복구할 수 있게 한다. 전역 store 도입 전 임시 조치.
+    router.replace({
+      pathname: '/(tabs)',
+      params: { completed: '1', taskContent: taskContent ?? '' },
+    });
   };
 
   return (

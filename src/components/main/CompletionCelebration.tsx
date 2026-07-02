@@ -65,7 +65,11 @@ export function CompletionCelebration({
       </View>
 
       <View style={styles.weekStripSection}>
-        <WeeklyStrip todayDayIndex={todayDayIndex} completedDays={completedDays} />
+        <WeeklyStrip
+          todayDayIndex={todayDayIndex}
+          completedDays={completedDays}
+          variant="celebration"
+        />
       </View>
 
       {/* TODO: 카카오톡 공유 SDK 연동 후 onShare 실제 구현 */}
