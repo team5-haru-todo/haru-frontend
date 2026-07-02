@@ -1,62 +1,80 @@
+import { StatusBarSpacer } from "@/src/components/common/StatusBarSpacer";
+import { CheckButton } from "@/src/components/main/CheckButton";
+import { CompletionMessage } from "@/src/components/main/CompletionMessage";
+import { EmptyState } from "@/src/components/main/EmptyState";
+import MemoPreviewSheet from "@/src/components/main/MemoPreviewSheet";
+import { NotificationPermissionModal } from "@/src/components/main/NotificationPermissionModal";
+import { StreakBadge } from "@/src/components/main/StreakBadge";
+import { TodayTaskCard } from "@/src/components/main/TodayTaskCard";
+import { colors } from "@/src/constants/colors";
+import { layout, spacing } from "@/src/constants/layout";
 import {
-  View,
-  Text,
-  SafeAreaView,
+  DUMMY_COMPLETED_DAYS,
+  DUMMY_STREAK,
+  DUMMY_TODAY_DAY_INDEX,
+} from "@/src/constants/mainDummy";
+import { typography } from "@/src/constants/typography";
+import { LinearGradient } from "expo-linear-gradient";
+import { router, useLocalSearchParams } from "expo-router";
+import { useEffect, useState } from "react";
+import {
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
   StyleSheet,
-} from 'react-native';
-import { useState } from 'react';
-import { LinearGradient } from 'expo-linear-gradient';
-import { colors } from '@/src/constants/colors';
-import { typography } from '@/src/constants/typography';
-import { spacing } from '@/src/constants/layout';
-import { EmptyState } from '@/src/components/main/EmptyState';
-import { TodayTaskCard } from '@/src/components/main/TodayTaskCard';
-import { CheckButton } from '@/src/components/main/CheckButton';
-import { StreakBadge } from '@/src/components/main/StreakBadge';
-import { CompletionCelebration } from '@/src/components/main/CompletionCelebration';
-import { CompletionMessage } from '@/src/components/main/CompletionMessage';
-import { NotificationPermissionModal } from '@/src/components/main/NotificationPermissionModal';
-import MemoPreviewSheet from '@/src/components/main/MemoPreviewSheet';
+  Text,
+  View,
+} from "react-native";
 
-type MainState = 'empty' | 'selected' | 'editing' | 'celebrating' | 'completed';
-
-// TODO: 백엔드 record 도메인 API 명세 확정 후 실제 데이터로 교체
-const DUMMY_STREAK = 3;
-const DUMMY_TODAY_DAY_INDEX = 2; // 0=월 ~ 6=일, 2=수요일
-const DUMMY_COMPLETED_DAYS = [true, true, true, false, false, false, false];
+type MainState = "empty" | "selected" | "editing" | "completed";
 
 export default function MainScreen() {
   // TODO: 백엔드 user 도메인에서 신규 사용자 여부 확인 후 초기값 교체
   const [showNotificationModal, setShowNotificationModal] = useState(true);
   const [showMemoPreview, setShowMemoPreview] = useState(false);
-  const [mainState, setMainState] = useState<MainState>('empty');
-  const [taskContent, setTaskContent] = useState('');
-  const [editingText, setEditingText] = useState('');
+  const [mainState, setMainState] = useState<MainState>("empty");
+  const [taskContent, setTaskContent] = useState("");
+  const [editingText, setEditingText] = useState("");
+  // TODO: API 연결 전 더미 흐름 — completion.tsx에서 확인 버튼을 누르면 completed 파라미터를 넘겨받는다.
+  const { completed } = useLocalSearchParams<{ completed?: string }>();
 
-  const today = new Date().toLocaleDateString('ko-KR', {
-    month: 'long',
-    day: 'numeric',
-    weekday: 'long',
+  useEffect(() => {
+    if (completed) {
+      setMainState("completed");
+      router.setParams({ completed: undefined });
+    }
+  }, [completed]);
+
+  const today = new Date().toLocaleDateString("ko-KR", {
+    month: "long",
+    day: "numeric",
+    weekday: "long",
   });
 
   const handleSubmitTask = (text: string) => {
     setTaskContent(text);
-    setMainState('selected');
+    setMainState("selected");
   };
 
   const handlePressEdit = () => {
     setEditingText(taskContent);
-    setMainState('editing');
+    setMainState("editing");
   };
 
   const handleComplete = () => {
     // TODO: 백엔드 record 도메인 완료 처리 API 확정 후 연결
-    if (mainState === 'editing' && editingText.trim()) {
-      setTaskContent(editingText.trim());
+    const finalContent =
+      mainState === "editing" && editingText.trim()
+        ? editingText.trim()
+        : taskContent;
+    if (finalContent !== taskContent) {
+      setTaskContent(finalContent);
     }
-    setMainState('celebrating');
+    // TODO: API 연결 전 더미 흐름 — taskContent/streakCount를 route params로 완료 화면에 전달한다.
+    router.push({
+      pathname: "/completion",
+      params: { taskContent: finalContent, streakCount: String(DUMMY_STREAK) },
+    });
   };
 
   const handleBlurEdit = () => {
@@ -64,16 +82,9 @@ export default function MainScreen() {
     if (editingText.trim()) {
       setTaskContent(editingText.trim());
     }
-    setMainState('selected');
+    setMainState("selected");
   };
 
-  const handleShare = () => {
-    // TODO: 카카오톡 공유 SDK 연동 후 실제 구현
-  };
-
-  const handleConfirm = () => {
-    setMainState('completed');
-  };
   const handleExtra = () => {
     setShowMemoPreview(true);
   };
@@ -90,74 +101,62 @@ export default function MainScreen() {
   };
 
   return (
-    <LinearGradient
-      colors={['#FFFFFF', '#E6F4FF']}
-      style={styles.gradient}
-    >
-      <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <View style={styles.container}>
-          <View style={styles.header}>
-            <Text style={styles.dateLabel}>{today}</Text>
-            <StreakBadge count={DUMMY_STREAK} />
-          </View>
+    <LinearGradient colors={["#FFFFFF", "#E6F4FF"]} style={styles.gradient}>
+      <View style={styles.safeArea}>
+        <StatusBarSpacer />
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          <View style={styles.container}>
+            <View style={styles.header}>
+              <Text style={styles.dateLabel}>{today}</Text>
+              <StreakBadge count={DUMMY_STREAK} />
+            </View>
 
-          <View style={styles.body}>
-            {mainState === 'empty' && (
-              <EmptyState onSubmit={handleSubmitTask} />
-            )}
+            <ScrollView
+              style={styles.scrollFlex}
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              {mainState === "empty" && (
+                <EmptyState onSubmit={handleSubmitTask} />
+              )}
 
-            {mainState === 'selected' && (
-              <View style={styles.taskArea}>
+              {mainState === "selected" && (
                 <TodayTaskCard
                   content={taskContent}
                   isEditing={false}
                   onPressEdit={handlePressEdit}
+                  footer={<CheckButton onPress={handleComplete} />}
                 />
-                <CheckButton onPress={handleComplete} />
-              </View>
-            )}
+              )}
 
-            {mainState === 'editing' && (
-              <View style={styles.taskArea}>
+              {mainState === "editing" && (
                 <TodayTaskCard
                   content={editingText}
                   isEditing={true}
                   onPressEdit={handlePressEdit}
                   onChangeText={setEditingText}
                   onBlur={handleBlurEdit}
+                  footer={<CheckButton onPress={handleComplete} />}
                 />
-                <CheckButton onPress={handleComplete} />
-              </View>
-            )}
+              )}
 
-            {mainState === 'celebrating' && (
-              <CompletionCelebration
-                taskContent={taskContent}
-                streakCount={DUMMY_STREAK}
-                todayDayIndex={DUMMY_TODAY_DAY_INDEX}
-                completedDays={DUMMY_COMPLETED_DAYS}
-                onShare={handleShare}
-                onConfirm={handleConfirm}
-              />
-            )}
-
-            {mainState === 'completed' && (
-              <CompletionMessage
-                taskContent={taskContent}
-                streakCount={DUMMY_STREAK}
-                todayDayIndex={DUMMY_TODAY_DAY_INDEX}
-                completedDays={DUMMY_COMPLETED_DAYS}
-                onExtra={handleExtra}
-              />
-            )}
+              {mainState === "completed" && (
+                <CompletionMessage
+                  taskContent={taskContent}
+                  streakCount={DUMMY_STREAK}
+                  todayDayIndex={DUMMY_TODAY_DAY_INDEX}
+                  completedDays={DUMMY_COMPLETED_DAYS}
+                  onExtra={handleExtra}
+                />
+              )}
+            </ScrollView>
           </View>
-        </View>
-      </KeyboardAvoidingView>
-      </SafeAreaView>
+        </KeyboardAvoidingView>
+      </View>
       <NotificationPermissionModal
         visible={showNotificationModal}
         onSkip={handleSkipNotification}
@@ -186,9 +185,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingTop: spacing.lg,
     paddingBottom: spacing.lg,
   },
@@ -196,13 +195,12 @@ const styles = StyleSheet.create({
     ...typography.t2Title2,
     color: colors.text.primary,
   },
-  body: {
+  scrollFlex: {
     flex: 1,
-    justifyContent: 'center',
-    paddingBottom: spacing.xxxl,
   },
-  taskArea: {
-    gap: spacing.lg,
-    alignItems: 'center',
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: "center",
+    paddingBottom: layout.tabBarHeight,
   },
 });

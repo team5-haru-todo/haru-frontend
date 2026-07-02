@@ -1,7 +1,7 @@
 import { View, Text, Image, StyleSheet } from 'react-native';
 import { colors } from '@/src/constants/colors';
 import { typography } from '@/src/constants/typography';
-import { spacing, radius } from '@/src/constants/layout';
+import { spacing } from '@/src/constants/layout';
 
 type Props = {
   todayDayIndex: number;
@@ -42,7 +42,7 @@ export function WeeklyStrip({ todayDayIndex, completedDays }: Props) {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface.default,
-    borderRadius: radius.card,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.button.disabled,
     paddingVertical: spacing.xl,

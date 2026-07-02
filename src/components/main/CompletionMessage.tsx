@@ -51,6 +51,12 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
     width: '100%',
     paddingTop: spacing.xxxl,
+    // 배경색은 Figma에서 확인 불가 상태라 추가하지 않음(2단계 "보류" 항목)
+    borderRadius: radius.card,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.13,
+    shadowRadius: 12,
   },
   checkIcon: {
     width: 58,
@@ -74,7 +80,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary.default,
     height: 54,
     borderRadius: radius.pill,
-    width: '100%',
+    width: 200,
     paddingHorizontal: spacing.xl,
   },
   listIcon: {

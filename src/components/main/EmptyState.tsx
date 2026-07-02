@@ -26,36 +26,38 @@ export function EmptyState({ onSubmit }: Props) {
         {"'"}를 적어볼까요?
       </Text>
 
-      <View style={styles.inputRow}>
-        {!hasText && <View style={styles.cursor} />}
-        <TextInput
-          style={styles.input}
-          value={inputText}
-          onChangeText={setInputText}
-          placeholder="오늘 할 일을 적어보세요"
-          placeholderTextColor={colors.text.placeholder}
-          returnKeyType="done"
-          onSubmitEditing={() => hasText && onSubmit(inputText.trim())}
-        />
-      </View>
+      <View style={styles.inputActionGroup}>
+        <View style={styles.inputRow}>
+          {!hasText && <View style={styles.cursor} />}
+          <TextInput
+            style={styles.input}
+            value={inputText}
+            onChangeText={setInputText}
+            placeholder="오늘 할 일을 적어보세요"
+            placeholderTextColor={colors.text.placeholder}
+            returnKeyType="done"
+            onSubmitEditing={() => hasText && onSubmit(inputText.trim())}
+          />
+        </View>
 
-      <TouchableOpacity
-        style={[
-          styles.button,
-          hasText ? styles.buttonActive : styles.buttonDisabled,
-        ]}
-        onPress={() => hasText && onSubmit(inputText.trim())}
-        activeOpacity={hasText ? 0.8 : 1}
-      >
-        <Text
+        <TouchableOpacity
           style={[
-            styles.buttonText,
-            hasText ? styles.buttonTextActive : styles.buttonTextDisabled,
+            styles.button,
+            hasText ? styles.buttonActive : styles.buttonDisabled,
           ]}
+          onPress={() => hasText && onSubmit(inputText.trim())}
+          activeOpacity={hasText ? 0.8 : 1}
         >
-          도전하기
-        </Text>
-      </TouchableOpacity>
+          <Text
+            style={[
+              styles.buttonText,
+              hasText ? styles.buttonTextActive : styles.buttonTextDisabled,
+            ]}
+          >
+            도전하기
+          </Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -67,6 +69,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xxl,
     paddingVertical: spacing.xxxl + spacing.sm,
     alignItems: "center",
+    justifyContent: "center",
     gap: spacing.xxxl,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 8 },
@@ -74,6 +77,7 @@ const styles = StyleSheet.create({
     shadowRadius: 24,
     elevation: 6,
     width: "100%",
+    height: 350,
   },
   greeting: {
     ...typography.t1Title1,
@@ -84,11 +88,15 @@ const styles = StyleSheet.create({
   accent: {
     color: colors.primary.default,
   },
+  inputActionGroup: {
+    alignItems: "center",
+    gap: 50,
+    width: "100%",
+  },
   inputRow: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: colors.surface.sunken,
-    borderRadius: radius.button,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     width: "100%",
@@ -112,7 +120,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: spacing.xl,
-    minWidth: 200,
+    width: 200,
   },
   buttonActive: {
     backgroundColor: colors.primary.light,
