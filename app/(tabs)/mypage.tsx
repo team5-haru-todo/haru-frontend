@@ -14,13 +14,15 @@ import { StatusBar } from 'expo-status-bar';
 import { colors } from '@/src/constants/colors';
 import { layout } from '@/src/constants/layout';
 import { StatusBarSpacer } from '@/src/components/common/StatusBarSpacer';
-import { getMe, getMySettings, updateMySettings, UserResponse } from '@/src/api/user';
+import { getMySettings, updateMySettings } from '@/src/api/user';
+import { useUserStore } from '@/src/store/userStore';
 
 const ICON_AVATAR = require('../../assets/images/Icon/Avatar.png');
 const ICON_ARROW_RIGHT = require('../../assets/images/Icon/Arrow_right.png');
 
 export default function MyPageScreen() {
-  const [user, setUser] = useState<UserResponse | null>(null);
+  const user = useUserStore((state) => state.user);
+  const fetchUser = useUserStore((state) => state.fetchUser);
   const [pushEnabled, setPushEnabled] = useState(true);
   const [loading, setLoading] = useState(true);
 
@@ -29,9 +31,11 @@ export default function MyPageScreen() {
 
     async function fetchData() {
       try {
-        const [me, settings] = await Promise.all([getMe(), getMySettings()]);
+        if (!user) {
+          await fetchUser();
+        }
+        const settings = await getMySettings();
         if (!isMounted) return;
-        setUser(me);
         setPushEnabled(settings.pushEnabled);
       } catch (error) {
         console.error('마이페이지 정보 조회 실패:', error);
