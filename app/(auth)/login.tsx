@@ -7,6 +7,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { loginAsGuest } from '@/src/api/auth';
+import { useUserStore } from '@/src/store/userStore';
 
 const KAKAO_ICON = require('../../assets/images/Icon/KaKao.png');
 const APPLE_ICON = require('../../assets/images/Icon/Apple.png');
@@ -14,6 +15,7 @@ const APPLE_ICON = require('../../assets/images/Icon/Apple.png');
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(false);
+  const fetchUser = useUserStore((state) => state.fetchUser);
 
   const handleGuestLogin = async () => {
     if (loading) return;
@@ -23,6 +25,7 @@ export default function LoginScreen() {
       if (Platform.OS !== 'web') {
         await SecureStore.setItemAsync('authToken', accessToken);
       }
+      await fetchUser();
       router.replace('/(tabs)');
     } catch (error) {
       console.error('게스트 로그인 실패:', error);
