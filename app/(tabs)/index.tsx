@@ -18,6 +18,7 @@ import { StreakBadge } from '@/src/components/main/StreakBadge';
 import { CompletionCelebration } from '@/src/components/main/CompletionCelebration';
 import { CompletionMessage } from '@/src/components/main/CompletionMessage';
 import { NotificationPermissionModal } from '@/src/components/main/NotificationPermissionModal';
+import MemoPreviewSheet from '@/src/components/main/MemoPreviewSheet';
 
 type MainState = 'empty' | 'selected' | 'editing' | 'celebrating' | 'completed';
 
@@ -29,6 +30,7 @@ const DUMMY_COMPLETED_DAYS = [true, true, true, false, false, false, false];
 export default function MainScreen() {
   // TODO: 백엔드 user 도메인에서 신규 사용자 여부 확인 후 초기값 교체
   const [showNotificationModal, setShowNotificationModal] = useState(true);
+  const [showMemoPreview, setShowMemoPreview] = useState(false);
   const [mainState, setMainState] = useState<MainState>('empty');
   const [taskContent, setTaskContent] = useState('');
   const [editingText, setEditingText] = useState('');
@@ -72,9 +74,8 @@ export default function MainScreen() {
   const handleConfirm = () => {
     setMainState('completed');
   };
-
   const handleExtra = () => {
-    // TODO: 추가 완료 화면 라우팅 연결
+    setShowMemoPreview(true);
   };
 
   const handleSkipNotification = () => {
@@ -161,6 +162,10 @@ export default function MainScreen() {
         visible={showNotificationModal}
         onSkip={handleSkipNotification}
         onAgree={handleAgreeNotification}
+      />
+      <MemoPreviewSheet
+        visible={showMemoPreview}
+        onClose={() => setShowMemoPreview(false)}
       />
     </LinearGradient>
   );

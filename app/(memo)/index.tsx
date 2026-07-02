@@ -3,10 +3,18 @@ import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { ScrollView, Swipeable } from 'react-native-gesture-handler';
+import { ActivityIndicator, Animated, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Swipeable } from 'react-native-gesture-handler';
+import {
+  NestableDraggableFlatList,
+  NestableScrollContainer,
+  type RenderItemParams,
+} from 'react-native-draggable-flatlist';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { setTodayTask } from '@/src/api/record';
+import type { TaskResponse } from '@/src/api/task';
+import { useMemos } from '@/src/hooks/useMemos';
 import { colors, radius, spacing, typography } from '@/src/constants';
 
 const pinIcon = require('@/assets/images/memo/pin-icon.png');
@@ -16,30 +24,106 @@ const trashIcon = require('@/assets/images/memo/trash-icon.png');
 const TOAST_VISIBLE_MS = 3000;
 const TOAST_FADE_MS = 400;
 
-type Memo = {
-  id: string;
-  title: string;
-  createdAt: number;
-  pinned: boolean;
+function formatRelativeDays(createdAt: string) {
+  const createdTime = new Date(createdAt).getTime();
+  if (Number.isNaN(createdTime)) {
+    return '';
+  }
+  const days = Math.floor((Date.now() - createdTime) / (1000 * 60 * 60 * 24));
+  return days <= 0 ? '오늘' : `${days}일 전`;
+}
+
+type MemoRowProps = {
+  memo: TaskResponse;
+  isEditing: boolean;
+  editText: string;
+  onChangeEdit: (text: string) => void;
+  onSubmitEdit: () => void;
+  onStartEdit: (memo: TaskResponse) => void;
+  onTogglePin: (memo: TaskResponse) => void;
+  onRequestDelete: (id: number) => void;
+  onChallenge: (memo: TaskResponse) => void;
+  onLongPress?: () => void;
 };
 
-function formatRelativeDays(createdAt: number) {
-  const days = Math.floor((Date.now() - createdAt) / (1000 * 60 * 60 * 24));
-  return days <= 0 ? '오늘' : `${days}일 전`;
+function MemoRow({
+  memo,
+  isEditing,
+  editText,
+  onChangeEdit,
+  onSubmitEdit,
+  onStartEdit,
+  onTogglePin,
+  onRequestDelete,
+  onChallenge,
+  onLongPress,
+}: MemoRowProps) {
+  if (isEditing) {
+    return (
+      <TextInput
+        style={styles.input}
+        value={editText}
+        onChangeText={onChangeEdit}
+        onSubmitEditing={onSubmitEdit}
+        onBlur={onSubmitEdit}
+        returnKeyType="done"
+        cursorColor={colors.primary.default}
+        autoFocus
+      />
+    );
+  }
+  return (
+    <Swipeable
+      overshootRight={false}
+      renderRightActions={() => (
+        <View style={styles.swipeActions}>
+          <Pressable style={styles.pinButton} onPress={() => onTogglePin(memo)}>
+            <Image
+              source={memo.taskType === 'RECURRING' ? pinFilledIcon : pinIcon}
+              style={styles.actionIcon}
+              contentFit="contain"
+            />
+          </Pressable>
+          <Pressable style={styles.deleteButton} onPress={() => onRequestDelete(memo.id)}>
+            <Image source={trashIcon} style={styles.actionIcon} contentFit="contain" />
+          </Pressable>
+        </View>
+      )}>
+      <Pressable style={styles.memoCard} onPress={() => onStartEdit(memo)} onLongPress={onLongPress}>
+        <View style={styles.memoCardContent}>
+          <Text style={styles.memoCardTitle}>{memo.content}</Text>
+          <Text style={styles.memoCardTime}>{formatRelativeDays(memo.createdAt)}</Text>
+        </View>
+        <Pressable style={styles.challengeButton} onPress={() => onChallenge(memo)}>
+          <Text style={styles.challengeButtonLabel}>도전</Text>
+        </Pressable>
+      </Pressable>
+    </Swipeable>
+  );
 }
 
 export default function MemoListScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const {
+    memos,
+    loading,
+    error,
+    addMemo,
+    editMemo,
+    removeMemo,
+    toggleMemoRecurring,
+    reorderMemosByType,
+  } = useMemos();
   const [isAdding, setIsAdding] = useState(false);
   const [memoText, setMemoText] = useState('');
-  const [memos, setMemos] = useState<Memo[]>([]);
   const [toastVisible, setToastVisible] = useState(false);
-  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [editText, setEditText] = useState('');
   const toastOpacity = useRef(new Animated.Value(0)).current;
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const editSubmittingRef = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -49,7 +133,7 @@ export default function MemoListScreen() {
     };
   }, []);
 
-  const handleChallenge = () => {
+  const showChallengeToast = () => {
     if (toastTimeoutRef.current) {
       clearTimeout(toastTimeoutRef.current);
     }
@@ -64,45 +148,76 @@ export default function MemoListScreen() {
     }, TOAST_VISIBLE_MS);
   };
 
-  const handleSubmitMemo = () => {
-    const title = memoText.trim();
-    if (title.length > 0) {
-      setMemos((prev) => [
-        { id: Date.now().toString(), title, createdAt: Date.now(), pinned: false },
-        ...prev,
-      ]);
+  // 도전 = 이 할 일을 오늘의 한 개로 설정 (record 도메인)
+  // TODO: 성공 시 메인으로 이동 + 전역 토스트 (네비게이션/토스트는 조율 후 별도 작업)
+  const handleChallenge = async (memo: TaskResponse) => {
+    try {
+      await setTodayTask(memo.id);
+    } catch (challengeError) {
+      console.error('오늘의 한 개 설정 실패:', challengeError);
+      return;
     }
-    setMemoText('');
-    setIsAdding(false);
+    showChallengeToast();
   };
 
-  const handleTogglePin = (id: string) => {
-    setMemos((prev) => prev.map((memo) => (memo.id === id ? { ...memo, pinned: !memo.pinned } : memo)));
+  const handleSubmitMemo = async () => {
+    const content = memoText.trim();
+    if (content.length === 0) {
+      setMemoText('');
+      setIsAdding(false);
+      return;
+    }
+
+    const success = await addMemo(content);
+    if (success) {
+      setMemoText('');
+      setIsAdding(false);
+    }
   };
 
-  const handleConfirmDelete = () => {
+  const handleTogglePin = async (memo: TaskResponse) => {
+    await toggleMemoRecurring(memo);
+  };
+
+  const handleConfirmDelete = async () => {
     if (pendingDeleteId !== null) {
-      setMemos((prev) => prev.filter((memo) => memo.id !== pendingDeleteId));
+      const success = await removeMemo(pendingDeleteId);
+      if (!success) {
+        return;
+      }
     }
     setPendingDeleteId(null);
   };
 
-  const startEditing = (memo: Memo) => {
+  const startEditing = (memo: TaskResponse) => {
     setEditingId(memo.id);
-    setEditText(memo.title);
+    setEditText(memo.content);
   };
 
-  const handleSubmitEdit = () => {
-    const title = editText.trim();
-    if (title.length > 0 && editingId !== null) {
-      setMemos((prev) => prev.map((memo) => (memo.id === editingId ? { ...memo, title } : memo)));
+  const handleSubmitEdit = async () => {
+    if (editSubmittingRef.current) {
+      return;
     }
-    setEditingId(null);
-    setEditText('');
+
+    const content = editText.trim();
+    if (content.length === 0 || editingId === null) {
+      setEditingId(null);
+      setEditText('');
+      return;
+    }
+
+    editSubmittingRef.current = true;
+    const taskId = editingId;
+    const success = await editMemo(taskId, content);
+    if (success) {
+      setEditingId(null);
+      setEditText('');
+    }
+    editSubmittingRef.current = false;
   };
 
-  const pinnedMemos = memos.filter((memo) => memo.pinned);
-  const unpinnedMemos = memos.filter((memo) => !memo.pinned);
+  const pinnedMemos = memos.filter((memo) => memo.taskType === 'RECURRING');
+  const unpinnedMemos = memos.filter((memo) => memo.taskType !== 'RECURRING');
 
   const renderInput = () => (
     <TextInput
@@ -118,52 +233,21 @@ export default function MemoListScreen() {
     />
   );
 
-  const renderMemoRow = (memo: Memo) => {
-    if (editingId === memo.id) {
-      return (
-        <TextInput
-          key={memo.id}
-          style={styles.input}
-          value={editText}
-          onChangeText={setEditText}
-          onSubmitEditing={handleSubmitEdit}
-          onBlur={handleSubmitEdit}
-          returnKeyType="done"
-          cursorColor={colors.primary.default}
-          autoFocus
-        />
-      );
-    }
-    return (
-      <Swipeable
-        key={memo.id}
-        overshootRight={false}
-        renderRightActions={() => (
-          <View style={styles.swipeActions}>
-            <Pressable style={styles.pinButton} onPress={() => handleTogglePin(memo.id)}>
-              <Image
-                source={memo.pinned ? pinFilledIcon : pinIcon}
-                style={styles.actionIcon}
-                contentFit="contain"
-              />
-            </Pressable>
-            <Pressable style={styles.deleteButton} onPress={() => setPendingDeleteId(memo.id)}>
-              <Image source={trashIcon} style={styles.actionIcon} contentFit="contain" />
-            </Pressable>
-          </View>
-        )}>
-        <Pressable style={styles.memoCard} onPress={() => startEditing(memo)}>
-          <View style={styles.memoCardContent}>
-            <Text style={styles.memoCardTitle}>{memo.title}</Text>
-            <Text style={styles.memoCardTime}>{formatRelativeDays(memo.createdAt)}</Text>
-          </View>
-          <Pressable style={styles.challengeButton} onPress={handleChallenge}>
-            <Text style={styles.challengeButtonLabel}>도전</Text>
-          </Pressable>
-        </Pressable>
-      </Swipeable>
-    );
+  const memoRowHandlers = {
+    editText,
+    onChangeEdit: setEditText,
+    onSubmitEdit: handleSubmitEdit,
+    onStartEdit: startEditing,
+    onTogglePin: handleTogglePin,
+    onRequestDelete: setPendingDeleteId,
+    onChallenge: handleChallenge,
   };
+
+  const renderDraggableRow = ({ item, drag }: RenderItemParams<TaskResponse>) => (
+    <View style={styles.dragItem}>
+      <MemoRow memo={item} isEditing={editingId === item.id} onLongPress={drag} {...memoRowHandlers} />
+    </View>
+  );
 
   return (
     <View style={styles.root}>
@@ -177,33 +261,52 @@ export default function MemoListScreen() {
       </View>
 
       <View style={styles.content}>
-        {isAdding && memos.length === 0 ? (
+        {loading ? (
+          <View style={styles.emptyState}>
+            <ActivityIndicator color={colors.primary.default} />
+          </View>
+        ) : isAdding && memos.length === 0 ? (
           <View style={styles.listWrapper}>{renderInput()}</View>
         ) : memos.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>
-              아직 적어둔 할 일이 없어요{'\n'}편하게 적어두고 나중에 꺼내 보세요 🌱
+              {error
+                ? '메모를 불러오지 못했어요'
+                : '아직 적어둔 할 일이 없어요\n편하게 적어두고 나중에 꺼내 보세요 🌱'}
             </Text>
           </View>
         ) : (
-          <ScrollView
+          <NestableScrollContainer
             style={styles.scroll}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}>
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>즐겨찾기</Text>
-              {pinnedMemos.map(renderMemoRow)}
-            </View>
+            {error && <Text style={styles.errorText}>요청을 처리하지 못했어요</Text>}
+            {pinnedMemos.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionLabel}>즐겨찾기</Text>
+                <NestableDraggableFlatList
+                  data={pinnedMemos}
+                  keyExtractor={(item) => String(item.id)}
+                  onDragEnd={({ data }) => reorderMemosByType('RECURRING', data)}
+                  renderItem={renderDraggableRow}
+                />
+              </View>
+            )}
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>전체</Text>
               {isAdding && renderInput()}
-              {unpinnedMemos.map(renderMemoRow)}
+              <NestableDraggableFlatList
+                data={unpinnedMemos}
+                keyExtractor={(item) => String(item.id)}
+                onDragEnd={({ data }) => reorderMemosByType('GENERAL', data)}
+                renderItem={renderDraggableRow}
+              />
             </View>
-          </ScrollView>
+          </NestableScrollContainer>
         )}
       </View>
 
-      {!(isAdding && memos.length === 0) && (
+      {!loading && !(isAdding && memos.length === 0) && (
         <View style={[styles.addButtonWrapper, { paddingBottom: insets.bottom }]}>
           <Pressable style={styles.addButton} onPress={() => setIsAdding(true)}>
             <Ionicons name="add-circle" size={24} color={colors.primary.default} />
@@ -297,6 +400,11 @@ const styles = StyleSheet.create({
     color: colors.text.tertiary,
     textAlign: 'center',
   },
+  errorText: {
+    ...typography.c1Caption,
+    color: colors.text.tertiary,
+    textAlign: 'center',
+  },
   listWrapper: {
     width: '100%',
     padding: 10,
@@ -307,6 +415,10 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     gap: 24,
+    paddingBottom: 10,
+  },
+  dragItem: {
+    marginBottom: 8,
   },
   section: {
     width: '100%',
