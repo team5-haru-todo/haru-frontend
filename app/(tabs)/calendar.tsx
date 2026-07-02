@@ -147,9 +147,9 @@ export default function CalendarScreen() {
           {/* Calendar_Grid: flex-col, gap=10, items-center, justify-center */}
           <View style={styles.calGrid}>
             {weeks.map((week, wi) => {
-              // TodayBadge: Figma → position absolute in Row_Week
-              // right: 309 - colIndex*50 (Row 350px, cell 50px, badge 32px)
-              // top: -11px
+              // TodayBadge: Figma → position absolute in Row_Week, centered over the
+              // today column. Computed as a percentage of the row's own width (not a
+              // fixed 390px-screen pixel value) so it stays centered on any device width.
               const todayColIdx = week.findIndex(
                 (d) => d !== null && isToday(d as number)
               );
@@ -157,11 +157,11 @@ export default function CalendarScreen() {
               return (
                 // Row_Week: flex, items-center, align-self stretch, position relative
                 <View key={wi} style={styles.weekRow}>
-                  {/* TodayBadge: absolute in Row_Week, Figma: right=309-colIdx*50, top=-11 */}
+                  {/* TodayBadge: absolute in Row_Week, centered over today's column */}
                   {todayColIdx >= 0 && (
                     <View style={[
                       styles.todayBadgeWrap,
-                      { right: 309 - todayColIdx * 50, top: -11 },
+                      { left: `${((todayColIdx + 0.5) / 7) * 100}%`, marginLeft: -16, top: -11 },
                     ]}>
                       <View style={styles.todayBadge}>
                         <Text style={styles.todayText}>오늘</Text>
