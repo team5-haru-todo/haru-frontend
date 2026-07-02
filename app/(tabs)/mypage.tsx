@@ -96,10 +96,7 @@ export default function MyPageScreen() {
           <TouchableOpacity
             style={styles.accountBtn}
             activeOpacity={0.7}
-            onPress={() => {
-              // TODO: 계정관리 화면 라우트 생성 후 연결
-              console.log('계정 관리 화면 — 라우트 미생성');
-            }}
+            onPress={() => router.push('/account-management')}
           >
             <Text style={styles.accountBtnText}>계정 관리</Text>
           </TouchableOpacity>
