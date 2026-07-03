@@ -1,4 +1,4 @@
-import { createTodayTask, getToday, getWeeklyStreak } from "@/src/api/record";
+import { completeToday, createTodayTask, getToday, getWeeklyStreak } from "@/src/api/record";
 import type { TodayResponse, WeeklyStreakResponse } from "@/src/api/record";
 import { updateTask } from "@/src/api/task";
 import { StatusBarSpacer } from "@/src/components/common/StatusBarSpacer";
@@ -19,7 +19,7 @@ import {
 import { typography } from "@/src/constants/typography";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -44,6 +44,13 @@ export default function MainScreen() {
   const [currentTaskId, setCurrentTaskId] = useState<number | null>(null);
   // API 연결 4단계 — UI 표시용이 아니라 중복 저장 방지용 내부 가드
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  // API 연결 5단계 — state는 비동기 반영이라 blur/완료가 거의 동시에 들어오면 중복 통과할 수 있어,
+  // saveEditingTaskIfNeeded 내부에서 동기적으로 체크하는 락으로 별도 사용.
+  // boolean이 아니라 진행 중인 Promise 자체를 담아서, 나중에 들어온 호출자도 같은 저장 결과를 기다리게 한다
+  // (예: onBlur가 먼저 저장을 시작하고 곧바로 완료 버튼 onPress가 들어와도, 완료 쪽이 그 저장을 이어받아 대기).
+  const savingEditPromiseRef = useRef<Promise<string | null> | null>(null);
+  // API 연결 5단계 — UI 표시용이 아니라 중복 완료 요청 방지용 내부 가드
+  const [isCompletingTask, setIsCompletingTask] = useState(false);
   // TODO: API 연결 1단계 — GET /api/streak/week만 연결. 실패 시 더미값으로 폴백해 화면이 죽지 않게 한다.
   const [weeklyStreak, setWeeklyStreak] = useState<WeeklyStreakResponse | null>(null);
 
@@ -77,9 +84,11 @@ export default function MainScreen() {
     }
   }, [completed, taskContentParam]);
 
-  // TODO: 완료 API 연결 후에는 completed param 가드를 재검토하고, 서버 상태를 기준으로 refetch하도록 변경
+  // API 연결 5단계 — 완료 API가 연결되어 서버 상태를 신뢰할 수 있으므로,
+  // completed param 유무와 무관하게 항상 서버 상태를 재조회한다.
+  // (completed 복귀 시 위 effect의 즉시 반영과 겹쳐 getToday가 한 번 더 불릴 수 있으나,
+  //  결과가 항상 서버 진짜 상태와 일치하므로 허용한다)
   useEffect(() => {
-    if (completed) return; // 완료 화면에서 돌아온 직후엔 서버 재조회로 덮어쓰지 않음
     getToday()
       .then((data: TodayResponse) => {
         setCurrentTaskId(data.currentTask?.id ?? null);
@@ -124,55 +133,81 @@ export default function MainScreen() {
     setMainState("editing");
   };
 
-  const handleComplete = () => {
-    // TODO: 백엔드 record 도메인 완료 처리 API 확정 후 연결
-    const finalContent =
-      mainState === "editing" && editingText.trim()
-        ? editingText.trim()
-        : taskContent;
-    if (finalContent !== taskContent) {
-      setTaskContent(finalContent);
+  // editing 상태의 변경 사항을 저장한다.
+  // - editing이 아니면 손댈 것 없이 현재 taskContent를 그대로 반환
+  // - 빈 값/변경 없음이면 서버 호출 없이 현재 상태 그대로 반환
+  // - currentTaskId 없음/저장 실패면 null 반환 — 호출부는 이후 진행(완료 등)을 중단해야 함
+  // - 이미 저장이 진행 중이면 새로 시작하지 않고 그 Promise를 그대로 이어받아 기다린다.
+  //   (onBlur가 먼저 저장을 시작한 직후 완료 버튼 onPress가 들어와도, updateTask는 한 번만 나가고
+  //    handleComplete는 같은 저장의 실제 결과를 받아 completeToday로 이어갈 수 있다)
+  const saveEditingTaskIfNeeded = (): Promise<string | null> => {
+    if (mainState !== "editing") return Promise.resolve(taskContent);
+    if (savingEditPromiseRef.current) return savingEditPromiseRef.current;
+
+    const trimmed = editingText.trim();
+
+    if (!trimmed) {
+      setMainState("selected");
+      return Promise.resolve(taskContent);
     }
-    // TODO: API 연결 전 더미 흐름 — taskContent/streakCount를 route params로 완료 화면에 전달한다.
-    router.push({
-      pathname: "/completion",
-      params: { taskContent: finalContent, streakCount: String(streakCount) },
-    });
+    if (trimmed === taskContent) {
+      setMainState("selected");
+      return Promise.resolve(taskContent);
+    }
+    if (currentTaskId === null) {
+      console.error("오늘의 한 개 수정 실패: currentTaskId 없음");
+      return Promise.resolve(null);
+    }
+
+    const savePromise = (async () => {
+      setIsSavingEdit(true);
+      try {
+        const data = await updateTask(currentTaskId, trimmed);
+        setTaskContent(data.content);
+        setMainState("selected");
+        return data.content;
+      } catch (error) {
+        console.error("오늘의 한 개 수정 실패:", error);
+        return null;
+      } finally {
+        setIsSavingEdit(false);
+        savingEditPromiseRef.current = null;
+      }
+    })();
+
+    savingEditPromiseRef.current = savePromise;
+    return savePromise;
+  };
+
+  const handleComplete = async () => {
+    if (isSavingEdit || isCompletingTask) return;
+
+    const finalContent = await saveEditingTaskIfNeeded();
+    if (finalContent === null) {
+      // 수정 내용 저장 실패 — 완료로 진행하지 않고 현재 상태 유지
+      return;
+    }
+
+    setIsCompletingTask(true);
+    try {
+      const data = await completeToday();
+      router.push({
+        pathname: "/completion",
+        params: {
+          taskContent: data.completion.content,
+          streakCount: String(data.streak.currentStreak),
+        },
+      });
+    } catch (error) {
+      console.error("오늘의 한 개 완료 처리 실패:", error);
+    } finally {
+      setIsCompletingTask(false);
+    }
   };
 
   const handleBlurEdit = async () => {
     if (isSavingEdit) return;
-    const trimmed = editingText.trim();
-
-    if (!trimmed) {
-      // 빈 값이면 서버 호출 없이 기존 내용 유지
-      setMainState("selected");
-      return;
-    }
-
-    if (trimmed === taskContent) {
-      // 실제 변경 없음 — 서버 호출 불필요
-      setMainState("selected");
-      return;
-    }
-
-    if (currentTaskId === null) {
-      // 저장할 taskId가 없어 서버 반영이 불가능한 상태 — 화면엔 반영하지 않고 editing 유지
-      console.error("오늘의 한 개 수정 실패: currentTaskId 없음");
-      return;
-    }
-
-    setIsSavingEdit(true);
-    try {
-      const data = await updateTask(currentTaskId, trimmed);
-      setTaskContent(data.content);
-      setMainState("selected");
-    } catch (error) {
-      console.error("오늘의 한 개 수정 실패:", error);
-      // mainState를 바꾸지 않아 editing 상태 유지 — 사용자가 재시도 가능
-    } finally {
-      setIsSavingEdit(false);
-    }
+    await saveEditingTaskIfNeeded();
   };
 
   const handleExtra = () => {

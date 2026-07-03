@@ -55,6 +55,20 @@ export interface WeeklyStreakResponse {
   days: DayCompletionResponse[];
 }
 
+export interface StreakSummary {
+  currentStreak: number;
+  maxStreak: number;
+  totalSuccessDays: number;
+  lastSuccessDate: string | null;
+}
+
+export interface FirstCompleteResponse {
+  date: string;
+  completion: CompletionResponse;
+  fireEarned: boolean;
+  streak: StreakSummary;
+}
+
 // 새 할 일 생성과 동시에 오늘의 한 개로 설정 (record 도메인)
 export async function createTodayTask(
   content: string,
@@ -84,5 +98,11 @@ export async function getWeeklyStreak(): Promise<WeeklyStreakResponse> {
 // 오늘 날짜 기준 오늘의 한 개 상태와 완료 목록 조회 (record 도메인)
 export async function getToday(): Promise<TodayResponse> {
   const response = await apiClient.get<ApiResponse<TodayResponse>>('/api/today');
+  return response.data.data;
+}
+
+// 오늘의 한 개 첫 완료 처리 (record 도메인)
+export async function completeToday(): Promise<FirstCompleteResponse> {
+  const response = await apiClient.post<ApiResponse<FirstCompleteResponse>>('/api/today/complete');
   return response.data.data;
 }
