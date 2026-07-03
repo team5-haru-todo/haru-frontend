@@ -1,10 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Swipeable } from 'react-native-gesture-handler';
+import { ActivityIndicator, Animated, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   NestedReorderableList,
   ScrollViewContainer,
@@ -15,97 +13,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { setTodayTask } from '@/src/api/record';
 import type { TaskResponse } from '@/src/api/task';
+import { DeleteMemoModal } from '@/src/components/memo/DeleteMemoModal';
+import { MemoCard, type MemoCardProps } from '@/src/components/memo/MemoCard';
 import { useMemos } from '@/src/hooks/useMemos';
 import { colors, radius, spacing, typography } from '@/src/constants';
-
-const pinIcon = require('@/assets/images/memo/pin-icon.png');
-const pinFilledIcon = require('@/assets/images/memo/pin-filled-icon.png');
-const trashIcon = require('@/assets/images/memo/trash-icon.png');
 
 const TOAST_VISIBLE_MS = 3000;
 const TOAST_FADE_MS = 400;
 
-function formatRelativeDays(createdAt: string) {
-  const createdTime = new Date(createdAt).getTime();
-  if (Number.isNaN(createdTime)) {
-    return '';
-  }
-  const days = Math.floor((Date.now() - createdTime) / (1000 * 60 * 60 * 24));
-  return days <= 0 ? '오늘' : `${days}일 전`;
-}
-
-type MemoRowProps = {
-  memo: TaskResponse;
-  isEditing: boolean;
-  editText: string;
-  onChangeEdit: (text: string) => void;
-  onSubmitEdit: () => void;
-  onStartEdit: (memo: TaskResponse) => void;
-  onTogglePin: (memo: TaskResponse) => void;
-  onRequestDelete: (id: number) => void;
-  onChallenge: (memo: TaskResponse) => void;
-  onLongPress?: () => void;
-};
-
-function MemoRow({
-  memo,
-  isEditing,
-  editText,
-  onChangeEdit,
-  onSubmitEdit,
-  onStartEdit,
-  onTogglePin,
-  onRequestDelete,
-  onChallenge,
-  onLongPress,
-}: MemoRowProps) {
-  if (isEditing) {
-    return (
-      <TextInput
-        style={styles.input}
-        value={editText}
-        onChangeText={onChangeEdit}
-        onSubmitEditing={onSubmitEdit}
-        onBlur={onSubmitEdit}
-        returnKeyType="done"
-        cursorColor={colors.primary.default}
-        autoFocus
-      />
-    );
-  }
-  return (
-    <Swipeable
-      overshootRight={false}
-      renderRightActions={() => (
-        <View style={styles.swipeActions}>
-          <Pressable style={styles.pinButton} onPress={() => onTogglePin(memo)}>
-            <Image
-              source={memo.taskType === 'RECURRING' ? pinFilledIcon : pinIcon}
-              style={styles.actionIcon}
-              contentFit="contain"
-            />
-          </Pressable>
-          <Pressable style={styles.deleteButton} onPress={() => onRequestDelete(memo.id)}>
-            <Image source={trashIcon} style={styles.actionIcon} contentFit="contain" />
-          </Pressable>
-        </View>
-      )}>
-      <Pressable style={styles.memoCard} onPress={() => onStartEdit(memo)} onLongPress={onLongPress}>
-        <View style={styles.memoCardContent}>
-          <Text style={styles.memoCardTitle}>{memo.content}</Text>
-          <Text style={styles.memoCardTime}>{formatRelativeDays(memo.createdAt)}</Text>
-        </View>
-        <Pressable style={styles.challengeButton} onPress={() => onChallenge(memo)}>
-          <Text style={styles.challengeButtonLabel}>도전</Text>
-        </Pressable>
-      </Pressable>
-    </Swipeable>
-  );
-}
-
-function DraggableMemoRow(props: MemoRowProps) {
+function DraggableMemoRow(props: MemoCardProps) {
   const drag = useReorderableDrag();
-  return <MemoRow {...props} onLongPress={drag} />;
+  return <MemoCard {...props} onLongPress={drag} />;
 }
 
 export default function MemoListScreen() {
@@ -344,29 +262,11 @@ export default function MemoListScreen() {
         </Animated.View>
       )}
 
-      <Modal
+      <DeleteMemoModal
         visible={pendingDeleteId !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setPendingDeleteId(null)}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modal}>
-            <Image source={trashIcon} style={styles.actionIcon} contentFit="contain" />
-            <View style={styles.modalTextGroup}>
-              <Text style={styles.modalTitle}>이 메모를 삭제할까요?</Text>
-              <Text style={styles.modalSubtitle}>삭제하면 다시 되돌릴 수 없어요</Text>
-            </View>
-            <View style={styles.modalButtons}>
-              <Pressable style={styles.modalCancelButton} onPress={() => setPendingDeleteId(null)}>
-                <Text style={styles.modalCancelLabel}>취소</Text>
-              </Pressable>
-              <Pressable style={styles.modalConfirmButton} onPress={handleConfirmDelete}>
-                <Text style={styles.modalConfirmLabel}>삭제하기</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        onCancel={() => setPendingDeleteId(null)}
+        onConfirm={handleConfirmDelete}
+      />
     </View>
   );
 }
@@ -452,70 +352,6 @@ const styles = StyleSheet.create({
     ...typography.b3BodyRegular,
     color: colors.text.primary,
   },
-  memoCard: {
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderRadius: radius.button,
-    backgroundColor: colors.surface.default,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  memoCardContent: {
-    flex: 1,
-    gap: 2,
-    padding: 10,
-  },
-  memoCardTitle: {
-    ...typography.b2BodyMedium,
-    color: colors.text.primary,
-  },
-  memoCardTime: {
-    ...typography.c1Caption,
-    color: colors.text.tertiary,
-  },
-  challengeButton: {
-    borderRadius: radius.pill,
-    backgroundColor: colors.primary.light,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  challengeButtonLabel: {
-    ...typography.b4BodySm,
-    color: colors.primary.default,
-  },
-  swipeActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingLeft: 8,
-  },
-  pinButton: {
-    width: 74,
-    height: 74,
-    borderRadius: radius.button,
-    backgroundColor: '#E8E9EC',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  deleteButton: {
-    width: 74,
-    height: 74,
-    borderRadius: radius.button,
-    backgroundColor: '#FFDFDF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  actionIcon: {
-    width: 24,
-    height: 24,
-  },
   addButtonWrapper: {
     width: '100%',
     alignItems: 'center',
@@ -568,75 +404,6 @@ const styles = StyleSheet.create({
   },
   toastLabel: {
     ...typography.b4BodySm,
-    color: colors.surface.default,
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modal: {
-    width: 291,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 24,
-    borderRadius: radius.card,
-    backgroundColor: colors.surface.default,
-    paddingTop: 30,
-    paddingBottom: 20,
-    paddingHorizontal: 40,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 24,
-    elevation: 8,
-  },
-  modalTextGroup: {
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingHorizontal: 20,
-  },
-  modalTitle: {
-    ...typography.b1Subtitle,
-    color: colors.text.primary,
-    textAlign: 'center',
-  },
-  modalSubtitle: {
-    ...typography.b4BodySm,
-    color: colors.text.primary,
-    textAlign: 'center',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    width: '100%',
-  },
-  modalCancelButton: {
-    flex: 1,
-    height: 54,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12,
-  },
-  modalCancelLabel: {
-    ...typography.b2BodyBold,
-    color: colors.text.tertiary,
-  },
-  modalConfirmButton: {
-    flex: 1,
-    height: 54,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12,
-    backgroundColor: colors.primary.default,
-  },
-  modalConfirmLabel: {
-    ...typography.b2BodyBold,
     color: colors.surface.default,
   },
 });
