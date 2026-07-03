@@ -21,8 +21,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.team5haru.harufrontend",
-      "kotlinVersion": "2.0.0"  // ⭕️ [치명적 해결사] 여기에 정석으로 한 줄 추가 완료!
+      "package": "com.team5haru.harufrontend"
     },
     "web": {
       "output": "static",
@@ -46,7 +45,8 @@
       [
         "@react-native-seoul/kakao-login",
         {
-          "kakaoAppKey": "75104b1eb83f956da04aaf559cd3ead7"
+          "kakaoAppKey": "75104b1eb83f956da04aaf559cd3ead7",
+          "kotlinVersion": "2.0.0"
         }
       ]
     ],
