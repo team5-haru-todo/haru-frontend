@@ -1,8 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   NestedReorderableList,
   ScrollViewContainer,
@@ -16,10 +15,8 @@ import type { TaskResponse } from '@/src/api/task';
 import { DeleteMemoModal } from '@/src/components/memo/DeleteMemoModal';
 import { MemoCard, type MemoCardProps } from '@/src/components/memo/MemoCard';
 import { useMemos } from '@/src/hooks/useMemos';
+import { useToastStore } from '@/src/store/toastStore';
 import { colors, radius, spacing, typography } from '@/src/constants';
-
-const TOAST_VISIBLE_MS = 3000;
-const TOAST_FADE_MS = 400;
 
 function DraggableMemoRow(props: MemoCardProps) {
   const drag = useReorderableDrag();
@@ -41,39 +38,12 @@ export default function MemoListScreen() {
   } = useMemos();
   const [isAdding, setIsAdding] = useState(false);
   const [memoText, setMemoText] = useState('');
-  const [toastVisible, setToastVisible] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editText, setEditText] = useState('');
-  const toastOpacity = useRef(new Animated.Value(0)).current;
-  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const editSubmittingRef = useRef(false);
 
-  useEffect(() => {
-    return () => {
-      if (toastTimeoutRef.current) {
-        clearTimeout(toastTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  const showChallengeToast = () => {
-    if (toastTimeoutRef.current) {
-      clearTimeout(toastTimeoutRef.current);
-    }
-    setToastVisible(true);
-    toastOpacity.setValue(1);
-    toastTimeoutRef.current = setTimeout(() => {
-      Animated.timing(toastOpacity, {
-        toValue: 0,
-        duration: TOAST_FADE_MS,
-        useNativeDriver: true,
-      }).start(() => setToastVisible(false));
-    }, TOAST_VISIBLE_MS);
-  };
-
-  // 도전 = 이 할 일을 오늘의 한 개로 설정 (record 도메인)
-  // TODO: 성공 시 메인으로 이동 + 전역 토스트 (네비게이션/토스트는 조율 후 별도 작업)
+  // 도전 = 이 할 일을 오늘의 한 개로 설정 (record 도메인) → 성공 시 전역 토스트 + 메인으로 이동
   const handleChallenge = async (memo: TaskResponse) => {
     try {
       await setTodayTask(memo.id);
@@ -81,7 +51,8 @@ export default function MemoListScreen() {
       console.error('오늘의 한 개 설정 실패:', challengeError);
       return;
     }
-    showChallengeToast();
+    useToastStore.getState().show('오늘의 한개로 설정했어요');
+    router.back();
   };
 
   const handleSubmitMemo = async () => {
@@ -245,23 +216,6 @@ export default function MemoListScreen() {
         </View>
       )}
 
-      {toastVisible && (
-        <Animated.View
-          style={[styles.toastWrapper, { bottom: insets.bottom + 106, opacity: toastOpacity }]}
-          pointerEvents="none">
-          <LinearGradient
-            colors={['#52565F', '#8A8E99']}
-            start={{ x: 0, y: 1 }}
-            end={{ x: 0, y: 0 }}
-            style={styles.toast}>
-            <View style={styles.toastCheckIcon}>
-              <Ionicons name="checkmark" size={14} color={colors.surface.default} />
-            </View>
-            <Text style={styles.toastLabel}>오늘의 한개로 설정했어요</Text>
-          </LinearGradient>
-        </Animated.View>
-      )}
-
       <DeleteMemoModal
         visible={pendingDeleteId !== null}
         onCancel={() => setPendingDeleteId(null)}
@@ -379,31 +333,5 @@ const styles = StyleSheet.create({
   addButtonLabel: {
     ...typography.b3BodyRegular,
     color: colors.text.secondary,
-  },
-  toastWrapper: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-  },
-  toast: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    borderRadius: radius.button,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  toastCheckIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: radius.pill,
-    backgroundColor: colors.primary.default,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  toastLabel: {
-    ...typography.b4BodySm,
-    color: colors.surface.default,
   },
 });
