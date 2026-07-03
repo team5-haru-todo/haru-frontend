@@ -43,7 +43,7 @@ export default function MemoListScreen() {
   const [editText, setEditText] = useState('');
   const editSubmittingRef = useRef(false);
 
-  // 도전 = 이 할 일을 오늘의 한 개로 설정 (record 도메인) → 성공 시 전역 토스트 + 메인으로 이동
+  // 도전 = 이 할 일을 오늘의 한 개로 설정 (record 도메인) → 성공 시 전역 토스트
   const handleChallenge = async (memo: TaskResponse) => {
     try {
       await setTodayTask(memo.id);
@@ -52,7 +52,6 @@ export default function MemoListScreen() {
       return;
     }
     useToastStore.getState().show('오늘의 한개로 설정했어요');
-    router.back();
   };
 
   const handleSubmitMemo = async () => {
