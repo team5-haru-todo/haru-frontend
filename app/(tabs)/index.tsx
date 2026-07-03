@@ -1,5 +1,5 @@
-import { getWeeklyStreak } from "@/src/api/record";
-import type { WeeklyStreakResponse } from "@/src/api/record";
+import { getToday, getWeeklyStreak } from "@/src/api/record";
+import type { TodayResponse, WeeklyStreakResponse } from "@/src/api/record";
 import { StatusBarSpacer } from "@/src/components/common/StatusBarSpacer";
 import { CheckButton } from "@/src/components/main/CheckButton";
 import { CompletionMessage } from "@/src/components/main/CompletionMessage";
@@ -69,6 +69,23 @@ export default function MainScreen() {
       router.setParams({ completed: undefined, taskContent: undefined });
     }
   }, [completed, taskContentParam]);
+
+  // TODO: 완료 API 연결 후에는 completed param 가드를 재검토하고, 서버 상태를 기준으로 refetch하도록 변경
+  useEffect(() => {
+    if (completed) return; // 완료 화면에서 돌아온 직후엔 서버 재조회로 덮어쓰지 않음
+    getToday()
+      .then((data: TodayResponse) => {
+        if (data.currentTask === null) {
+          setMainState("empty");
+          return;
+        }
+        setTaskContent(data.currentTask.content);
+        setMainState(data.fireEarned || data.firstCompletedAt ? "completed" : "selected");
+      })
+      .catch((error) => {
+        console.error("오늘의 한 개 조회 실패:", error);
+      });
+  }, [completed]);
 
   const today = new Date().toLocaleDateString("ko-KR", {
     month: "long",

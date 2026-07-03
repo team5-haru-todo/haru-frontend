@@ -17,6 +17,31 @@ export interface TodayTaskSetResponse {
   currentTaskSelectedAt: string;
 }
 
+export interface TodayCurrentTask {
+  id: number;
+  content: string;
+  taskType: TaskType;
+}
+
+export interface CompletionResponse {
+  id: number;
+  taskId: number;
+  content: string;
+  taskType: TaskType;
+  completionType: 'FIRST' | 'ADDITIONAL';
+  completedAt: string;
+}
+
+export interface TodayResponse {
+  date: string;
+  currentTask: TodayCurrentTask | null;
+  fireEarned: boolean;
+  firstCompletedAt: string | null;
+  canFirstComplete: boolean;
+  canAdditionalComplete: boolean;
+  completedTasks: CompletionResponse[];
+}
+
 export interface DayCompletionResponse {
   date: string;
   dayOfWeek: string;
@@ -41,5 +66,11 @@ export async function setTodayTask(taskId: number): Promise<TodayTaskSetResponse
 // 이번 주(월~일, Asia/Seoul) 요일별 완료 여부와 현재 스트릭 조회 (record 도메인)
 export async function getWeeklyStreak(): Promise<WeeklyStreakResponse> {
   const response = await apiClient.get<ApiResponse<WeeklyStreakResponse>>('/api/streak/week');
+  return response.data.data;
+}
+
+// 오늘 날짜 기준 오늘의 한 개 상태와 완료 목록 조회 (record 도메인)
+export async function getToday(): Promise<TodayResponse> {
+  const response = await apiClient.get<ApiResponse<TodayResponse>>('/api/today');
   return response.data.data;
 }
