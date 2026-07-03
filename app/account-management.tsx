@@ -1,39 +1,26 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Image, ActivityIndicator, Platform, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { login as kakaoLogin } from '@react-native-seoul/kakao-login';
-import * as AppleAuthentication from 'expo-apple-authentication';
 
 import { colors } from '@/src/constants/colors';
 import { StatusBarSpacer } from '@/src/components/common/StatusBarSpacer';
 import { ConfirmDialog } from '@/src/components/common/ConfirmDialog';
 import { getMe, UserResponse } from '@/src/api/user';
-import { logout, linkKakao, linkApple } from '@/src/api/auth';
+import { logout } from '@/src/api/auth';
 
 const ICON_ARROW_LEFT = require('../assets/images/Icon/Arrow_left.png');
 const ICON_AVATAR = require('../assets/images/Icon/Avatar.png');
-const ICON_ARROW_RIGHT = require('../assets/images/Icon/Arrow_Right_xs.png');
 
 export default function AccountManagementScreen() {
   const [user, setUser] = useState<UserResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [logoutDialogVisible, setLogoutDialogVisible] = useState(false);
-  const [linkingProvider, setLinkingProvider] = useState<'kakao' | 'apple' | null>(null);
-
-  const fetchData = async () => {
-    try {
-      const me = await getMe();
-      setUser(me);
-    } catch (error) {
-      console.error('계정 정보 조회 실패:', error);
-    }
-  };
 
   useEffect(() => {
     let isMounted = true;
 
-    async function initialFetch() {
+    async function fetchData() {
       try {
         const me = await getMe();
         if (isMounted) setUser(me);
@@ -44,15 +31,11 @@ export default function AccountManagementScreen() {
       }
     }
 
-    initialFetch();
+    fetchData();
     return () => {
       isMounted = false;
     };
   }, []);
-
-  const connectedProvidersUpper = (user?.connectedProviders ?? []).map((p) => p.toUpperCase());
-  const isKakaoLinked = connectedProvidersUpper.includes('KAKAO');
-  const isAppleLinked = connectedProvidersUpper.includes('APPLE');
 
   const connectedLabel =
     user?.connectedProviders && user.connectedProviders.length > 0
@@ -73,50 +56,6 @@ export default function AccountManagementScreen() {
       await logout();
     } catch (error) {
       console.error('로그아웃 실패:', error);
-    }
-  };
-
-  const handleLinkKakao = async () => {
-    if (linkingProvider || isKakaoLinked) return;
-    setLinkingProvider('kakao');
-    try {
-      const kakaoToken = await kakaoLogin();
-      await linkKakao({ accessToken: kakaoToken.accessToken });
-      await fetchData();
-      Alert.alert('연동 완료', '카카오 계정이 연동되었어요.');
-    } catch (error) {
-      console.error('카카오 계정 연동 실패:', error);
-      Alert.alert('연동 실패', '카카오 계정 연동에 실패했어요. 다시 시도해 주세요.');
-    } finally {
-      setLinkingProvider(null);
-    }
-  };
-
-  const handleLinkApple = async () => {
-    if (linkingProvider || isAppleLinked) return;
-    setLinkingProvider('apple');
-    try {
-      const credential = await AppleAuthentication.signInAsync({
-        requestedScopes: [
-          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-          AppleAuthentication.AppleAuthenticationScope.EMAIL,
-        ],
-      });
-      if (!credential.identityToken) {
-        throw new Error('Apple identityToken을 받지 못했습니다.');
-      }
-      await linkApple({ identityToken: credential.identityToken });
-      await fetchData();
-      Alert.alert('연동 완료', 'Apple 계정이 연동되었어요.');
-    } catch (error: any) {
-      if (error?.code === 'ERR_REQUEST_CANCELED') {
-        // 사용자가 직접 취소한 경우 - 에러 처리 불필요
-      } else {
-        console.error('Apple 계정 연동 실패:', error);
-        Alert.alert('연동 실패', 'Apple 계정 연동에 실패했어요. 다시 시도해 주세요.');
-      }
-    } finally {
-      setLinkingProvider(null);
     }
   };
 
@@ -151,47 +90,6 @@ export default function AccountManagementScreen() {
               <Text style={styles.profileAccount}>{connectedLabel}</Text>
             </View>
           </View>
-        </View>
-
-        <View style={styles.sectionDivider} />
-
-        {/* 계정 연동 섹션 */}
-        <View style={styles.linkSection}>
-          <Text style={styles.linkSectionTitle}>계정 연동</Text>
-
-          <TouchableOpacity
-            style={styles.linkItem}
-            activeOpacity={isKakaoLinked ? 1 : 0.7}
-            onPress={handleLinkKakao}
-            disabled={isKakaoLinked || linkingProvider !== null}
-          >
-            <Text style={[styles.linkItemText, isKakaoLinked && styles.linkItemTextDisabled]}>
-              {isKakaoLinked ? '카카오 계정 연동됨' : '카카오 계정 연동하기'}
-            </Text>
-            {linkingProvider === 'kakao' ? (
-              <ActivityIndicator size="small" color={colors.text.tertiary} />
-            ) : (
-              !isKakaoLinked && <Image source={ICON_ARROW_RIGHT} style={styles.linkIcon} />
-            )}
-          </TouchableOpacity>
-
-          {Platform.OS === 'ios' && (
-            <TouchableOpacity
-              style={styles.linkItem}
-              activeOpacity={isAppleLinked ? 1 : 0.7}
-              onPress={handleLinkApple}
-              disabled={isAppleLinked || linkingProvider !== null}
-            >
-              <Text style={[styles.linkItemText, isAppleLinked && styles.linkItemTextDisabled]}>
-                {isAppleLinked ? 'Apple 계정 연동됨' : 'Apple 계정 연동하기'}
-              </Text>
-              {linkingProvider === 'apple' ? (
-                <ActivityIndicator size="small" color={colors.text.tertiary} />
-              ) : (
-                !isAppleLinked && <Image source={ICON_ARROW_RIGHT} style={styles.linkIcon} />
-              )}
-            </TouchableOpacity>
-          )}
         </View>
 
         <View style={styles.sectionDivider} />
@@ -293,41 +191,6 @@ const styles = StyleSheet.create({
 
   // Divider_Section: h=12, #F4F5F7
   sectionDivider: { height: 12, backgroundColor: '#F4F5F7', width: '100%' },
-
-  // 계정 연동 섹션
-  linkSection: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    width: '100%',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 8,
-    backgroundColor: '#FFFFFF',
-  },
-  linkSectionTitle: {
-    fontSize: 12,
-    fontFamily: 'Pretendard-Medium',
-    color: colors.text.tertiary,
-    lineHeight: 16,
-    marginBottom: 4,
-  },
-  linkItem: {
-    height: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  linkItemText: {
-    fontSize: 16,
-    fontFamily: 'Pretendard-Regular',
-    color: colors.text.primary,
-    lineHeight: 24,
-  },
-  linkItemTextDisabled: {
-    color: colors.text.placeholder,
-  },
-  linkIcon: { width: 24, height: 24, resizeMode: 'contain' },
 
   // Content_Area: gap=16, pt=24, pb=12, px=20, items-center
   contentArea: {
