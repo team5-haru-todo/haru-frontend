@@ -21,7 +21,8 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.team5haru.harufrontend"
+      "package": "com.team5haru.harufrontend",
+      "kotlinVersion": "2.0.0"  // ⭕️ [치명적 해결사] 여기에 정석으로 한 줄 추가 완료!
     },
     "web": {
       "output": "static",
