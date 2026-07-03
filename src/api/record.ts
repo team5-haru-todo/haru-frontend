@@ -106,3 +106,17 @@ export async function completeToday(): Promise<FirstCompleteResponse> {
   const response = await apiClient.post<ApiResponse<FirstCompleteResponse>>('/api/today/complete');
   return response.data.data;
 }
+
+export interface AdditionalCompleteResponse {
+  date: string;
+  completion: CompletionResponse;
+}
+
+// 첫 완료 이후 다른 할 일을 추가로 완료 처리 (record 도메인, 스트릭에는 영향 없음)
+export async function completeAdditional(taskId: number): Promise<AdditionalCompleteResponse> {
+  const response = await apiClient.post<ApiResponse<AdditionalCompleteResponse>>(
+    '/api/today/additional-complete',
+    { taskId }
+  );
+  return response.data.data;
+}

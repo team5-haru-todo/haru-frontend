@@ -3,6 +3,7 @@ import { radius, spacing } from "@/src/constants/layout";
 import { typography } from "@/src/constants/typography";
 import { useState } from "react";
 import {
+  Image,
   StyleSheet,
   Text,
   TextInput,
@@ -12,56 +13,78 @@ import {
 
 type Props = {
   onSubmit: (text: string) => void;
+  onChooseFromMemo: () => void;
 };
 
-export function EmptyState({ onSubmit }: Props) {
+export function EmptyState({ onSubmit, onChooseFromMemo }: Props) {
   const [inputText, setInputText] = useState("");
   const hasText = inputText.trim().length > 0;
 
   return (
-    <View style={styles.card}>
-      <Text style={styles.greeting}>
-        딱 하나만 해도 괜찮아요,{"\n"}오늘의 {"'"}
-        <Text style={styles.accent}>한개</Text>
-        {"'"}를 적어볼까요?
-      </Text>
+    <View style={styles.wrapper}>
+      <View style={styles.card}>
+        <Text style={styles.greeting}>
+          딱 하나만 해도 괜찮아요,{"\n"}오늘의 {"'"}
+          <Text style={styles.accent}>한개</Text>
+          {"'"}를 적어볼까요?
+        </Text>
 
-      <View style={styles.inputActionGroup}>
-        <View style={styles.inputRow}>
-          <TextInput
-            style={styles.input}
-            value={inputText}
-            onChangeText={setInputText}
-            placeholder="오늘 할 일을 적어보세요"
-            placeholderTextColor={colors.text.placeholder}
-            returnKeyType="done"
-            onSubmitEditing={() => hasText && onSubmit(inputText.trim())}
-          />
-        </View>
+        <View style={styles.inputActionGroup}>
+          <View style={styles.inputRow}>
+            <TextInput
+              style={styles.input}
+              value={inputText}
+              onChangeText={setInputText}
+              placeholder="오늘 할 일을 적어보세요"
+              placeholderTextColor={colors.text.placeholder}
+              returnKeyType="done"
+              onSubmitEditing={() => hasText && onSubmit(inputText.trim())}
+            />
+          </View>
 
-        <TouchableOpacity
-          style={[
-            styles.button,
-            hasText ? styles.buttonActive : styles.buttonDisabled,
-          ]}
-          onPress={() => hasText && onSubmit(inputText.trim())}
-          activeOpacity={hasText ? 0.8 : 1}
-        >
-          <Text
+          <TouchableOpacity
             style={[
-              styles.buttonText,
-              hasText ? styles.buttonTextActive : styles.buttonTextDisabled,
+              styles.button,
+              hasText ? styles.buttonActive : styles.buttonDisabled,
             ]}
+            onPress={() => hasText && onSubmit(inputText.trim())}
+            activeOpacity={hasText ? 0.8 : 1}
           >
-            도전하기
-          </Text>
-        </TouchableOpacity>
+            <Text
+              style={[
+                styles.buttonText,
+                hasText ? styles.buttonTextActive : styles.buttonTextDisabled,
+              ]}
+            >
+              도전하기
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
+
+      {/* Figma Link_ChooseFromMemo. 아이콘은 Ic_memo 24x24 에셋이 없어 임시로 list.png 재사용 — TODO: 실제 에셋 교체 */}
+      <TouchableOpacity
+        style={styles.chooseFromMemoLink}
+        onPress={onChooseFromMemo}
+        activeOpacity={0.7}
+      >
+        <Image
+          source={require("../../../assets/images/list.png")}
+          style={styles.chooseFromMemoIcon}
+          resizeMode="contain"
+        />
+        <Text style={styles.chooseFromMemoLabel}>메모장에서 고르기</Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrapper: {
+    width: "100%",
+    alignItems: "center",
+    gap: spacing.xl,
+  },
   card: {
     backgroundColor: colors.surface.default,
     borderRadius: radius.card,
@@ -132,5 +155,21 @@ const styles = StyleSheet.create({
   },
   buttonTextDisabled: {
     color: colors.text.tertiary,
+  },
+  chooseFromMemoLink: {
+    width: 154,
+    height: 24,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  chooseFromMemoIcon: {
+    width: 24,
+    height: 24,
+    tintColor: colors.primary.default,
+  },
+  chooseFromMemoLabel: {
+    ...typography.b2BodyMedium,
+    color: colors.primary.default,
   },
 });

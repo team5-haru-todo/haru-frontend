@@ -1,6 +1,14 @@
-import { completeToday, createTodayTask, getToday, getWeeklyStreak } from "@/src/api/record";
+import {
+  completeAdditional,
+  completeToday,
+  createTodayTask,
+  getToday,
+  getWeeklyStreak,
+  setTodayTask,
+} from "@/src/api/record";
 import type { TodayResponse, WeeklyStreakResponse } from "@/src/api/record";
 import { updateTask } from "@/src/api/task";
+import type { TaskResponse } from "@/src/api/task";
 import { StatusBarSpacer } from "@/src/components/common/StatusBarSpacer";
 import { CheckButton } from "@/src/components/main/CheckButton";
 import { CompletionMessage } from "@/src/components/main/CompletionMessage";
@@ -30,11 +38,16 @@ import {
 } from "react-native";
 
 type MainState = "empty" | "selected" | "editing" | "completed";
+type MemoPreviewMode = "selectTodayTask" | "additionalComplete";
 
 export default function MainScreen() {
   // TODO: 백엔드 user 도메인에서 신규 사용자 여부 확인 후 초기값 교체
   const [showNotificationModal, setShowNotificationModal] = useState(true);
   const [showMemoPreview, setShowMemoPreview] = useState(false);
+  // API 연결 6단계 — MemoPreviewSheet가 열린 목적(오늘의 한 개 선택 vs 추가 완료)을 구분
+  const [memoPreviewMode, setMemoPreviewMode] = useState<MemoPreviewMode>("selectTodayTask");
+  // API 연결 6단계 — UI 표시용이 아니라 중복 선택 방지용 내부 가드
+  const [isSelectingMemoTask, setIsSelectingMemoTask] = useState(false);
   const [mainState, setMainState] = useState<MainState>("empty");
   const [taskContent, setTaskContent] = useState("");
   const [editingText, setEditingText] = useState("");
@@ -210,8 +223,43 @@ export default function MainScreen() {
     await saveEditingTaskIfNeeded();
   };
 
-  const handleExtra = () => {
+  // Empty 상태의 Link_ChooseFromMemo — 오늘의 한 개를 메모장에서 고르는 흐름
+  const handleOpenMemoPreviewForSelect = () => {
+    setMemoPreviewMode("selectTodayTask");
     setShowMemoPreview(true);
+  };
+
+  // Completed 상태의 "하루 한개 더하기" — 추가 완료 흐름 (CompletionMessage는 무수정)
+  const handleExtra = () => {
+    setMemoPreviewMode("additionalComplete");
+    setShowMemoPreview(true);
+  };
+
+  const handleSelectMemoTask = async (memo: TaskResponse) => {
+    if (isSelectingMemoTask) return;
+    setIsSelectingMemoTask(true);
+    try {
+      if (memoPreviewMode === "selectTodayTask") {
+        const data = await setTodayTask(memo.id);
+        if (data.currentTask) {
+          setTaskContent(data.currentTask.content);
+          setCurrentTaskId(data.currentTask.id);
+        }
+        setMainState("selected");
+      } else {
+        await completeAdditional(memo.id);
+        // 추가 완료는 streak/currentTask/mainState에 영향 없음(백엔드 확인됨) — 상태 변경 불필요
+      }
+      setShowMemoPreview(false);
+    } catch (error) {
+      console.error(
+        memoPreviewMode === "selectTodayTask" ? "오늘의 한 개 설정 실패:" : "추가 완료 실패:",
+        error
+      );
+      // 실패 시 시트 유지 — 재시도 가능
+    } finally {
+      setIsSelectingMemoTask(false);
+    }
   };
 
   const handleSkipNotification = () => {
@@ -246,7 +294,10 @@ export default function MainScreen() {
               showsVerticalScrollIndicator={false}
             >
               {mainState === "empty" && (
-                <EmptyState onSubmit={handleSubmitTask} />
+                <EmptyState
+                  onSubmit={handleSubmitTask}
+                  onChooseFromMemo={handleOpenMemoPreviewForSelect}
+                />
               )}
 
               {mainState === "selected" && (
@@ -290,6 +341,7 @@ export default function MainScreen() {
       <MemoPreviewSheet
         visible={showMemoPreview}
         onClose={() => setShowMemoPreview(false)}
+        onSelect={handleSelectMemoTask}
       />
     </LinearGradient>
   );

@@ -3,7 +3,6 @@ import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View, Modal } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { setTodayTask } from '@/src/api/record';
 import type { TaskResponse } from '@/src/api/task';
 import { useMemos } from '@/src/hooks/useMemos';
 import { colors, radius, spacing, typography } from '@/src/constants';
@@ -11,6 +10,7 @@ import { colors, radius, spacing, typography } from '@/src/constants';
 type Props = {
   visible: boolean;
   onClose: () => void;
+  onSelect: (memo: TaskResponse) => void;
 };
 
 function formatRelativeDays(createdAt: string) {
@@ -20,7 +20,7 @@ function formatRelativeDays(createdAt: string) {
   return days <= 0 ? '오늘' : `${days}일 전`;
 }
 
-export default function MemoPreviewSheet({ visible, onClose }: Props) {
+export default function MemoPreviewSheet({ visible, onClose, onSelect }: Props) {
   const router = useRouter();
   const { memos, loading, refreshMemos } = useMemos();
 
@@ -39,13 +39,8 @@ export default function MemoPreviewSheet({ visible, onClose }: Props) {
     router.push('/(memo)');
   };
 
-  const handleChallenge = async (memo: TaskResponse) => {
-    try {
-      await setTodayTask(memo.id);
-      onClose();
-    } catch (e) {
-      console.error('오늘의 한 개 설정 실패:', e);
-    }
+  const handleChallenge = (memo: TaskResponse) => {
+    onSelect(memo);
   };
 
   const renderCard = (memo: TaskResponse) => (
