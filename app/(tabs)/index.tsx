@@ -1,3 +1,5 @@
+import { getWeeklyStreak } from "@/src/api/record";
+import type { WeeklyStreakResponse } from "@/src/api/record";
 import { StatusBarSpacer } from "@/src/components/common/StatusBarSpacer";
 import { CheckButton } from "@/src/components/main/CheckButton";
 import { CompletionMessage } from "@/src/components/main/CompletionMessage";
@@ -35,6 +37,21 @@ export default function MainScreen() {
   const [mainState, setMainState] = useState<MainState>("empty");
   const [taskContent, setTaskContent] = useState("");
   const [editingText, setEditingText] = useState("");
+  // TODO: API 연결 1단계 — GET /api/streak/week만 연결. 실패 시 더미값으로 폴백해 화면이 죽지 않게 한다.
+  const [weeklyStreak, setWeeklyStreak] = useState<WeeklyStreakResponse | null>(null);
+
+  useEffect(() => {
+    getWeeklyStreak()
+      .then(setWeeklyStreak)
+      .catch((error) => {
+        console.error("주간 스트릭 조회 실패:", error);
+      });
+  }, []);
+
+  const streakCount = weeklyStreak?.currentStreak ?? DUMMY_STREAK;
+  const todayDayIndex = weeklyStreak?.todayDayIndex ?? DUMMY_TODAY_DAY_INDEX;
+  const completedDays =
+    weeklyStreak?.days.map((day) => day.completed) ?? DUMMY_COMPLETED_DAYS;
   // TODO: API 연결 전 더미 흐름 — completion.tsx에서 확인 버튼을 누르면 completed/taskContent 파라미터를 넘겨받는다.
   // router.replace로 이 화면이 remount될 경우 taskContent local state가 초기화되므로,
   // completed와 함께 넘어온 taskContent param으로 복구한다. 전역 store 도입 전 임시 조치.
@@ -81,7 +98,7 @@ export default function MainScreen() {
     // TODO: API 연결 전 더미 흐름 — taskContent/streakCount를 route params로 완료 화면에 전달한다.
     router.push({
       pathname: "/completion",
-      params: { taskContent: finalContent, streakCount: String(DUMMY_STREAK) },
+      params: { taskContent: finalContent, streakCount: String(streakCount) },
     });
   };
 
@@ -119,7 +136,7 @@ export default function MainScreen() {
           <View style={styles.container}>
             <View style={styles.header}>
               <Text style={styles.dateLabel}>{today}</Text>
-              <StreakBadge count={DUMMY_STREAK} />
+              <StreakBadge count={streakCount} />
             </View>
 
             <ScrollView
@@ -155,9 +172,9 @@ export default function MainScreen() {
               {mainState === "completed" && (
                 <CompletionMessage
                   taskContent={taskContent}
-                  streakCount={DUMMY_STREAK}
-                  todayDayIndex={DUMMY_TODAY_DAY_INDEX}
-                  completedDays={DUMMY_COMPLETED_DAYS}
+                  streakCount={streakCount}
+                  todayDayIndex={todayDayIndex}
+                  completedDays={completedDays}
                   onExtra={handleExtra}
                 />
               )}
