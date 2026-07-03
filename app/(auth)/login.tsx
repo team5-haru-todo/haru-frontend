@@ -1,4 +1,3 @@
-import { HomeIndicatorSpacer } from '../../src/components/common/HomeIndicatorSpacer';
 import { colors, radius, spacing, typography } from '@/src/constants';
 import { Image, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -6,11 +5,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
-import { loginAsGuest } from '@/src/api/auth';
+import { login as kakaoLogin } from '@react-native-seoul/kakao-login';
+import { loginAsGuest, loginWithKakao } from '@/src/api/auth';
 import { useUserStore } from '@/src/store/userStore';
 
 const KAKAO_ICON = require('../../assets/images/Icon/KaKao.png');
 const APPLE_ICON = require('../../assets/images/Icon/Apple.png');
+
+// TODO: 약관 화면(terms.tsx) 정식 연동 전까지 임시 고정값 사용
+const TEMP_TERMS_VERSION = 'v1.0';
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
@@ -29,6 +32,33 @@ export default function LoginScreen() {
       router.replace('/(tabs)');
     } catch (error) {
       console.error('게스트 로그인 실패:', error);
+      // TODO: 에러 발생 시 사용자에게 보여줄 알림 UI 추가 필요
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleKakaoLogin = async () => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      // 1. 카카오 네이티브 SDK로 카카오 자체 로그인 (기기의 카카오톡 앱 또는 웹뷰)
+      const kakaoToken = await kakaoLogin();
+
+      // 2. 카카오 액세스 토큰을 우리 백엔드로 전달, 자체 JWT 발급받기
+      const { accessToken } = await loginWithKakao({
+        accessToken: kakaoToken.accessToken,
+        termsVersion: TEMP_TERMS_VERSION,
+        agreedAt: new Date().toISOString(),
+      });
+
+      if (Platform.OS !== 'web') {
+        await SecureStore.setItemAsync('authToken', accessToken);
+      }
+      await fetchUser();
+      router.replace('/(tabs)');
+    } catch (error) {
+      console.error('카카오 로그인 실패:', error);
       // TODO: 에러 발생 시 사용자에게 보여줄 알림 UI 추가 필요
     } finally {
       setLoading(false);
@@ -57,7 +87,7 @@ export default function LoginScreen() {
         </View>
 
         {/* Bottom_Area */}
-        <View style={styles.bottomArea}>
+        <View style={[styles.bottomArea, { paddingBottom: Math.max(insets.bottom, 24) }]}>
           <View style={styles.bottomContentGroup}>
             {/* 툴팁 */}
             <View style={styles.tooltipContainer}>
@@ -70,7 +100,12 @@ export default function LoginScreen() {
             </View>
 
             {/* 버튼 그룹 */}
-            <TouchableOpacity style={styles.btnKakao} activeOpacity={0.8}>
+            <TouchableOpacity
+              style={styles.btnKakao}
+              activeOpacity={0.8}
+              onPress={handleKakaoLogin}
+              disabled={loading}
+            >
               <Image source={KAKAO_ICON} style={styles.btnIcon} />
               <Text style={styles.btnKakaoText}>카카오로 시작하기</Text>
             </TouchableOpacity>
@@ -95,11 +130,6 @@ export default function LoginScreen() {
         </View>
 
       </View>
-
-      {/* 3. 🧪 하단 고정 인디케이터 (빨간색 테스트 배경) */}
-      <View style={styles.indicatorRedWrapper}>
-        <HomeIndicatorSpacer />
-      </View>
     </View>
   );
 }
@@ -118,7 +148,6 @@ const styles = StyleSheet.create({
 
   topArea: {
     flex: 1,
-    minHeight: 246.67,
     alignItems: 'center',
     justifyContent: 'center',
     paddingTop: 80,
@@ -140,7 +169,6 @@ const styles = StyleSheet.create({
 
   middleArea: {
     flex: 1,
-    minHeight: 246.67,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -153,7 +181,6 @@ const styles = StyleSheet.create({
 
   bottomArea: {
     flex: 1,
-    minHeight: 246.67,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -245,10 +272,5 @@ const styles = StyleSheet.create({
     ...typography.b4BodySm,
     color: colors.text.tertiary,
     textDecorationLine: 'underline',
-  },
-
-  indicatorRedWrapper: {
-    width: '100%',
-    backgroundColor: 'rgba(255, 0, 0, 0.2)',
   },
 });
