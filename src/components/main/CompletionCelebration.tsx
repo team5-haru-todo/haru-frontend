@@ -1,11 +1,11 @@
-import { useRef, useEffect } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
-import LottieView from 'lottie-react-native';
-import { colors } from '@/src/constants/colors';
-import { typography } from '@/src/constants/typography';
-import { spacing } from '@/src/constants/layout';
-import { StreakBadge } from './StreakBadge';
-import { WeeklyStrip } from './WeeklyStrip';
+import { colors } from "@/src/constants/colors";
+import { spacing } from "@/src/constants/layout";
+import { typography } from "@/src/constants/typography";
+import LottieView from "lottie-react-native";
+import { useEffect, useRef } from "react";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StreakBadge } from "./StreakBadge";
+import { WeeklyStrip } from "./WeeklyStrip";
 
 type Props = {
   taskContent: string;
@@ -40,11 +40,18 @@ export function CompletionCelebration({
         {/* Confetti_JSON: Content_Area 전체 오버레이, check 뒤에서 터짐 (zIndex 0) */}
         <LottieView
           ref={confettiRef}
-          source={require('../../../assets/animations/confetti.json')}
+          source={require("../../../assets/animations/confetti.json")}
           autoPlay={false}
           loop={false}
           style={styles.confettiLottie}
-          webStyle={{ position: 'absolute', top: 0, left: 0, width: '100%', height: 313, zIndex: 0 }}
+          webStyle={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: 313,
+            zIndex: 0,
+          }}
           resizeMode="cover"
         />
 
@@ -53,7 +60,7 @@ export function CompletionCelebration({
         <View style={styles.resultCard}>
           {/* Check_JSON: 124×124px, 화면 진입 즉시 재생 (zIndex 1) */}
           <LottieView
-            source={require('../../../assets/animations/check.json')}
+            source={require("../../../assets/animations/check.json")}
             autoPlay={true}
             loop={false}
             style={styles.checkLottie}
@@ -73,9 +80,13 @@ export function CompletionCelebration({
       </View>
 
       {/* TODO: 카카오톡 공유 SDK 연동 후 onShare 실제 구현 */}
-      <TouchableOpacity style={styles.shareButton} onPress={onShare} activeOpacity={0.8}>
+      <TouchableOpacity
+        style={styles.shareButton}
+        onPress={onShare}
+        activeOpacity={0.8}
+      >
         <Image
-          source={require('../../../assets/images/share.png')}
+          source={require("../../../assets/images/share.png")}
           style={styles.shareIcon}
           resizeMode="contain"
         />
@@ -86,7 +97,11 @@ export function CompletionCelebration({
       <View style={styles.bottomSpacer} />
 
       <View style={styles.confirmWrapper}>
-        <TouchableOpacity style={styles.confirmButton} onPress={onConfirm} activeOpacity={0.8}>
+        <TouchableOpacity
+          style={styles.confirmButton}
+          onPress={onConfirm}
+          activeOpacity={0.8}
+        >
           <Text style={styles.confirmText}>확인</Text>
         </TouchableOpacity>
       </View>
@@ -97,35 +112,35 @@ export function CompletionCelebration({
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    width: '100%',
+    width: "100%",
   },
   contentArea: {
-    alignItems: 'center',
+    alignItems: "center",
     gap: 30,
     paddingHorizontal: spacing.xl,
   },
   confettiLottie: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     height: 313,
     zIndex: 0,
-    pointerEvents: 'none',
+    pointerEvents: "none",
   },
   title: {
     ...typography.h1Display,
     color: colors.primary.default,
-    textAlign: 'center',
+    textAlign: "center",
     zIndex: 1,
   },
   resultCard: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     gap: 34,
     paddingHorizontal: spacing.xxl,
     paddingVertical: spacing.xxxl + spacing.sm,
-    width: '100%',
+    width: "100%",
   },
   checkLottie: {
     width: 124,
@@ -133,19 +148,19 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   weekStripSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: spacing.xl,
-    width: '100%',
+    width: "100%",
   },
   shareButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 6,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
-    alignSelf: 'center',
+    alignSelf: "center",
     marginTop: 20,
   },
   shareIcon: {
@@ -161,16 +176,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   confirmWrapper: {
-    width: '100%',
+    width: "100%",
     paddingHorizontal: spacing.xl,
   },
   confirmButton: {
     backgroundColor: colors.primary.default,
     height: 52,
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
   },
   confirmText: {
     ...typography.b2BodyBold,

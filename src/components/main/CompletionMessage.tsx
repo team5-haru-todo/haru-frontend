@@ -20,17 +20,22 @@ export function CompletionMessage({
 }: Props) {
   return (
     <View style={styles.container}>
-      <Image
-        source={require('../../../assets/images/Check.png')}
-        style={styles.checkIcon}
-        resizeMode="contain"
-      />
+      <View style={styles.greetingGroup}>
+        <Image
+          source={require('../../../assets/images/Check.png')}
+          style={styles.checkIcon}
+          resizeMode="contain"
+        />
 
-      <Text style={styles.completedLabel}>오늘 한개 완료!</Text>
+        <Text style={styles.completedLabel}>오늘 한개 완료!</Text>
 
-      <Text style={styles.taskTitle}>{taskContent}</Text>
+        <Text style={styles.taskTitle}>{taskContent}</Text>
+      </View>
 
-      <WeeklyStrip todayDayIndex={todayDayIndex} completedDays={completedDays} />
+      {/* Figma 기준 TextGroup_Greeting→WeekStrip 간격 40 = container.gap(16) + marginTop(24) */}
+      <View style={styles.weekStripWrapper}>
+        <WeeklyStrip todayDayIndex={todayDayIndex} completedDays={completedDays} />
+      </View>
 
       {/* TODO: 추가 완료 화면 라우팅 연결 */}
       <TouchableOpacity style={styles.extraButton} onPress={onExtra} activeOpacity={0.8}>
@@ -58,6 +63,18 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.13,
     shadowRadius: 12,
   },
+  // Figma TextGroup_Greeting 294x182 hug — 투두 문장 길이가 가변적이라 height 대신 minHeight로 잘림 방지
+  greetingGroup: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.lg,
+    width: '100%',
+    minHeight: 182,
+  },
+  weekStripWrapper: {
+    width: '100%',
+    marginTop: 24,
+  },
   checkIcon: {
     width: 58,
     height: 58,
@@ -82,6 +99,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     width: 200,
     paddingHorizontal: spacing.xl,
+    // Figma 기준 WeeklyStrip~버튼 간격 36 = container.gap(16) + marginTop(20). container.gap은 다른 형제 간격 유지 위해 그대로 둠
+    marginTop: 20,
   },
   listIcon: {
     width: 20,

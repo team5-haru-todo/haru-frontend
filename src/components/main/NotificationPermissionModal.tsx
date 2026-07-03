@@ -98,13 +98,19 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.16)",
     alignItems: "center",
     justifyContent: "center",
+    // 카드 width:350이 좁은 기기(화면폭 <390)에서 여백 없이 꽉 찰 수 있어 좌우 최소 여백 확보
+    paddingHorizontal: 20,
   },
   card: {
     backgroundColor: colors.surface.default,
     borderRadius: radius.card,
     padding: spacing.xxl,
     gap: 28,
-    width: 350,
+    // Figma 기준 350 고정폭이되, 좁은 기기 대응을 위해 100%+maxWidth로 캡
+    width: "100%",
+    maxWidth: 350,
+    // Figma 기준 height 384 고정
+    height: 384,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,

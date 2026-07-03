@@ -75,7 +75,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.13,
     shadowRadius: 24,
     elevation: 6,
-    width: "100%",
+    // Figma 기준 카드 342 vs header 350 — width:'100%'+marginHorizontal은 오버플로우를 유발하므로
+    // alignSelf:'stretch'(부모 폭에 맞춰 늘어남)로 부모 폭을 채운 뒤 marginHorizontal로 좌우 4px씩 줄인다.
+    alignSelf: "stretch",
+    marginHorizontal: 4,
     height: 350,
   },
   greeting: {
