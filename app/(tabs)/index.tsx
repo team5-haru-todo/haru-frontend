@@ -1,5 +1,6 @@
-import { getToday, getWeeklyStreak } from "@/src/api/record";
+import { createTodayTask, getToday, getWeeklyStreak } from "@/src/api/record";
 import type { TodayResponse, WeeklyStreakResponse } from "@/src/api/record";
+import { updateTask } from "@/src/api/task";
 import { StatusBarSpacer } from "@/src/components/common/StatusBarSpacer";
 import { CheckButton } from "@/src/components/main/CheckButton";
 import { CompletionMessage } from "@/src/components/main/CompletionMessage";
@@ -37,6 +38,12 @@ export default function MainScreen() {
   const [mainState, setMainState] = useState<MainState>("empty");
   const [taskContent, setTaskContent] = useState("");
   const [editingText, setEditingText] = useState("");
+  // API 연결 3단계 — UI 표시용이 아니라 중복 제출 방지용 내부 가드
+  const [isSubmittingTask, setIsSubmittingTask] = useState(false);
+  // API 연결 4단계 — 오늘의 한 개 수정(PATCH /api/tasks/{id})에 필요한 taskId 보관
+  const [currentTaskId, setCurrentTaskId] = useState<number | null>(null);
+  // API 연결 4단계 — UI 표시용이 아니라 중복 저장 방지용 내부 가드
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
   // TODO: API 연결 1단계 — GET /api/streak/week만 연결. 실패 시 더미값으로 폴백해 화면이 죽지 않게 한다.
   const [weeklyStreak, setWeeklyStreak] = useState<WeeklyStreakResponse | null>(null);
 
@@ -75,6 +82,7 @@ export default function MainScreen() {
     if (completed) return; // 완료 화면에서 돌아온 직후엔 서버 재조회로 덮어쓰지 않음
     getToday()
       .then((data: TodayResponse) => {
+        setCurrentTaskId(data.currentTask?.id ?? null);
         if (data.currentTask === null) {
           setMainState("empty");
           return;
@@ -93,9 +101,22 @@ export default function MainScreen() {
     weekday: "long",
   });
 
-  const handleSubmitTask = (text: string) => {
-    setTaskContent(text);
-    setMainState("selected");
+  const handleSubmitTask = async (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed || isSubmittingTask) return;
+    setIsSubmittingTask(true);
+    try {
+      const data = await createTodayTask(trimmed);
+      if (data.currentTask) {
+        setTaskContent(data.currentTask.content);
+        setCurrentTaskId(data.currentTask.id);
+      }
+      setMainState("selected");
+    } catch (error) {
+      console.error("오늘의 한 개 생성 실패:", error);
+    } finally {
+      setIsSubmittingTask(false);
+    }
   };
 
   const handlePressEdit = () => {
@@ -119,12 +140,39 @@ export default function MainScreen() {
     });
   };
 
-  const handleBlurEdit = () => {
-    // TODO: 백엔드 task/record 수정 API 확정 후 실제 저장 로직 연결
-    if (editingText.trim()) {
-      setTaskContent(editingText.trim());
+  const handleBlurEdit = async () => {
+    if (isSavingEdit) return;
+    const trimmed = editingText.trim();
+
+    if (!trimmed) {
+      // 빈 값이면 서버 호출 없이 기존 내용 유지
+      setMainState("selected");
+      return;
     }
-    setMainState("selected");
+
+    if (trimmed === taskContent) {
+      // 실제 변경 없음 — 서버 호출 불필요
+      setMainState("selected");
+      return;
+    }
+
+    if (currentTaskId === null) {
+      // 저장할 taskId가 없어 서버 반영이 불가능한 상태 — 화면엔 반영하지 않고 editing 유지
+      console.error("오늘의 한 개 수정 실패: currentTaskId 없음");
+      return;
+    }
+
+    setIsSavingEdit(true);
+    try {
+      const data = await updateTask(currentTaskId, trimmed);
+      setTaskContent(data.content);
+      setMainState("selected");
+    } catch (error) {
+      console.error("오늘의 한 개 수정 실패:", error);
+      // mainState를 바꾸지 않아 editing 상태 유지 — 사용자가 재시도 가능
+    } finally {
+      setIsSavingEdit(false);
+    }
   };
 
   const handleExtra = () => {
