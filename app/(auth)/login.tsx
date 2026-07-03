@@ -1,4 +1,3 @@
-import { HomeIndicatorSpacer } from '../../src/components/common/HomeIndicatorSpacer';
 import { colors, radius, spacing, typography } from '@/src/constants';
 import { Image, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -88,7 +87,7 @@ export default function LoginScreen() {
         </View>
 
         {/* Bottom_Area */}
-        <View style={styles.bottomArea}>
+        <View style={[styles.bottomArea, { paddingBottom: Math.max(insets.bottom, 24) }]}>
           <View style={styles.bottomContentGroup}>
             {/* 툴팁 */}
             <View style={styles.tooltipContainer}>
@@ -131,11 +130,6 @@ export default function LoginScreen() {
         </View>
 
       </View>
-
-      {/* 3. 🧪 하단 고정 인디케이터 (빨간색 테스트 배경) */}
-      <View style={styles.indicatorRedWrapper}>
-        <HomeIndicatorSpacer />
-      </View>
     </View>
   );
 }
@@ -154,7 +148,6 @@ const styles = StyleSheet.create({
 
   topArea: {
     flex: 1,
-    minHeight: 246.67,
     alignItems: 'center',
     justifyContent: 'center',
     paddingTop: 80,
@@ -176,7 +169,6 @@ const styles = StyleSheet.create({
 
   middleArea: {
     flex: 1,
-    minHeight: 246.67,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -189,7 +181,6 @@ const styles = StyleSheet.create({
 
   bottomArea: {
     flex: 1,
-    minHeight: 246.67,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -281,10 +272,5 @@ const styles = StyleSheet.create({
     ...typography.b4BodySm,
     color: colors.text.tertiary,
     textDecorationLine: 'underline',
-  },
-
-  indicatorRedWrapper: {
-    width: '100%',
-    backgroundColor: 'rgba(255, 0, 0, 0.2)',
   },
 });
