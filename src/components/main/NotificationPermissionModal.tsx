@@ -13,13 +13,15 @@ import {
 type Props = {
   visible: boolean;
   onSkip: () => void;
-  onAgree: () => void;
+  onAgree: () => void | Promise<void>;
+  agreeing?: boolean;
 };
 
 export function NotificationPermissionModal({
   visible,
   onSkip,
   onAgree,
+  agreeing = false,
 }: Props) {
   return (
     <Modal
@@ -81,9 +83,12 @@ export function NotificationPermissionModal({
             <TouchableOpacity
               style={styles.btnAgree}
               onPress={onAgree}
+              disabled={agreeing}
               activeOpacity={0.8}
             >
-              <Text style={styles.btnAgreeText}>동의하고 알림 받기</Text>
+              <Text style={styles.btnAgreeText}>
+                {agreeing ? '설정 중...' : '동의하고 알림 받기'}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
