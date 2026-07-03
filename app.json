@@ -13,7 +13,8 @@
       "bundleIdentifier": "com.team5haru.harufrontend",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "usesAppleSignIn": true
     },
     "android": {
       "adaptiveIcon": {
