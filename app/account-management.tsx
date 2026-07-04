@@ -6,16 +6,18 @@ import { StatusBar } from 'expo-status-bar';
 import { colors } from '@/src/constants/colors';
 import { StatusBarSpacer } from '@/src/components/common/StatusBarSpacer';
 import { ConfirmDialog } from '@/src/components/common/ConfirmDialog';
+import { GuestLogoutDialog } from '@/src/components/common/GuestLogoutDialog';
 import { getMe, UserResponse } from '@/src/api/user';
 import { logout } from '@/src/api/auth';
 
 const ICON_ARROW_LEFT = require('../assets/images/Icon/Arrow_left.png');
-const ICON_AVATAR = require('../assets/images/Icon/Avatar.png');
+const ICON_ARROW_RIGHT = require('../assets/images/Icon/Arrow_Right_xs.png');
 
 export default function AccountManagementScreen() {
   const [user, setUser] = useState<UserResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [logoutDialogVisible, setLogoutDialogVisible] = useState(false);
+  const isGuest = user?.status === 'GUEST';
 
   useEffect(() => {
     let isMounted = true;
@@ -84,13 +86,38 @@ export default function AccountManagementScreen() {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.profileArea}>
           <View style={styles.profileLeft}>
-            <Image source={ICON_AVATAR} style={styles.avatar} resizeMode="cover" />
-            <View style={styles.profileTexts}>
-              <Text style={styles.profileName}>{user?.nickname ?? '-'}</Text>
-              <Text style={styles.profileAccount}>{connectedLabel}</Text>
-            </View>
+            {isGuest ? (
+              <View style={styles.profileTexts}>
+                <Text style={styles.profileName}>게스트</Text>
+                <Text style={styles.profileAccount}>게스트로 로그인</Text>
+              </View>
+            ) : (
+              <View style={styles.profileTexts}>
+                <Text style={styles.profileName}>{user?.nickname ?? '-'}</Text>
+                <Text style={styles.profileAccount}>{connectedLabel}</Text>
+              </View>
+            )}
           </View>
         </View>
+
+        {isGuest && (
+          <>
+            <View style={styles.sectionDivider} />
+            <View style={styles.settingsList}>
+              <View style={styles.sectionTitle}>
+                <Text style={styles.sectionTitleText}>계정 연동</Text>
+              </View>
+              <TouchableOpacity style={styles.listItem} activeOpacity={0.7}>
+                <Text style={styles.listItemText}>카카오 계정 연동하기</Text>
+                <Image source={ICON_ARROW_RIGHT} style={styles.listIcon} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.listItem} activeOpacity={0.7}>
+                <Text style={styles.listItemText}>Apple 계정 연동하기</Text>
+                <Image source={ICON_ARROW_RIGHT} style={styles.listIcon} />
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
 
         <View style={styles.sectionDivider} />
 
@@ -103,23 +130,33 @@ export default function AccountManagementScreen() {
             <Text style={styles.btnLogoutText}>로그아웃</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.btnWithdraw}
-            activeOpacity={0.7}
-            onPress={() => router.push('/withdrawal')}
-          >
-            <Text style={styles.btnWithdrawText}>회원 탈퇴</Text>
-          </TouchableOpacity>
+          {!isGuest && (
+            <TouchableOpacity
+              style={styles.btnWithdraw}
+              activeOpacity={0.7}
+              onPress={() => router.push('/withdrawal')}
+            >
+              <Text style={styles.btnWithdrawText}>회원 탈퇴</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
 
-      <ConfirmDialog
-        visible={logoutDialogVisible}
-        title="알림"
-        description="로그아웃 하시겠습니까?"
-        onCancel={() => setLogoutDialogVisible(false)}
-        onConfirm={handleConfirmLogout}
-      />
+      {isGuest ? (
+        <GuestLogoutDialog
+          visible={logoutDialogVisible}
+          onLogout={handleConfirmLogout}
+          onConnect={() => setLogoutDialogVisible(false)}
+        />
+      ) : (
+        <ConfirmDialog
+          visible={logoutDialogVisible}
+          title="알림"
+          description="로그아웃 하시겠습니까?"
+          onCancel={() => setLogoutDialogVisible(false)}
+          onConfirm={handleConfirmLogout}
+        />
+      )}
     </View>
   );
 }
@@ -173,7 +210,6 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   profileLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  avatar: { width: 74, height: 74, borderRadius: 37 },
   profileTexts: { gap: 4 },
   profileName: {
     fontSize: 18,
@@ -191,6 +227,48 @@ const styles = StyleSheet.create({
 
   // Divider_Section: h=12, #F4F5F7
   sectionDivider: { height: 12, backgroundColor: '#F4F5F7', width: '100%' },
+
+  // Settings_List (게스트 계정 연동 섹션): border-bottom 1px #E8E9EC, pb24
+  settingsList: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    width: '100%',
+    paddingBottom: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8E9EC',
+    backgroundColor: '#FFFFFF',
+  },
+  sectionTitle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: 24,
+    paddingBottom: 8,
+    paddingHorizontal: 20,
+    backgroundColor: '#FFFFFF',
+    width: '100%',
+  },
+  sectionTitleText: {
+    fontSize: 12,
+    fontFamily: 'Pretendard-Medium',
+    color: colors.text.tertiary,
+    lineHeight: 16,
+  },
+  listItem: {
+    height: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    backgroundColor: '#FFFFFF',
+    width: '100%',
+  },
+  listItemText: {
+    fontSize: 16,
+    fontFamily: 'Pretendard-Regular',
+    color: colors.text.primary,
+    lineHeight: 24,
+  },
+  listIcon: { width: 24, height: 24, resizeMode: 'contain' },
 
   // Content_Area: gap=16, pt=24, pb=12, px=20, items-center
   contentArea: {

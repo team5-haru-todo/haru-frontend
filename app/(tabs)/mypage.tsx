@@ -20,13 +20,13 @@ import { getMySettings, updateMySettings } from '@/src/api/user';
 import { useUserStore } from '@/src/store/userStore';
 import { registerForPushNotifications } from '@/src/services/pushNotifications';
 
-const ICON_AVATAR = require('../../assets/images/Icon/Avatar.png');
 const ICON_ARROW_RIGHT = require('../../assets/images/Icon/Arrow_Right_xs.png');
 const SUPPORT_EMAIL = 'support@example.com';
 
 export default function MyPageScreen() {
   const user = useUserStore((state) => state.user);
   const fetchUser = useUserStore((state) => state.fetchUser);
+  const isGuest = user?.status === 'GUEST';
   const [pushEnabled, setPushEnabled] = useState(true);
   const [pushUpdating, setPushUpdating] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -132,10 +132,9 @@ export default function MyPageScreen() {
 
         <View style={styles.profileArea}>
           <View style={styles.profileLeft}>
-            <Image source={ICON_AVATAR} style={styles.avatar} resizeMode="cover" />
             <View style={styles.profileTexts}>
-              <Text style={styles.profileName}>{user?.nickname ?? '-'}</Text>
-              <Text style={styles.profileAccount}>{connectedLabel}</Text>
+              <Text style={styles.profileName}>{isGuest ? '게스트' : user?.nickname ?? '-'}</Text>
+              <Text style={styles.profileAccount}>{isGuest ? '게스트로 로그인됨' : connectedLabel}</Text>
             </View>
           </View>
           <TouchableOpacity
@@ -143,7 +142,7 @@ export default function MyPageScreen() {
             activeOpacity={0.7}
             onPress={() => router.push('/account-management')}
           >
-            <Text style={styles.accountBtnText}>계정 관리</Text>
+            <Text style={styles.accountBtnText}>{isGuest ? '계정 연결하기' : '계정 관리'}</Text>
           </TouchableOpacity>
         </View>
 
@@ -249,7 +248,6 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   profileLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  avatar: { width: 74, height: 74, borderRadius: 37 },
   profileTexts: { gap: 4 },
   profileName: {
     fontSize: 18,
