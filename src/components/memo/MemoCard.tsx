@@ -43,6 +43,8 @@ export function MemoCard({
   onChallenge,
   onLongPress,
 }: MemoCardProps) {
+  const isChallengeDisabled = memo.completedToday;
+
   if (isEditing) {
     return (
       <TextInput
@@ -79,7 +81,10 @@ export function MemoCard({
           <Text style={styles.memoCardTitle}>{memo.content}</Text>
           <Text style={styles.memoCardTime}>{formatRelativeDays(memo.createdAt)}</Text>
         </View>
-        <Pressable style={styles.challengeButton} onPress={() => onChallenge(memo)}>
+        <Pressable
+          style={[styles.challengeButton, isChallengeDisabled && styles.challengeButtonDisabled]}
+          onPress={() => onChallenge(memo)}
+          disabled={isChallengeDisabled}>
           <Text style={styles.challengeButtonLabel}>도전</Text>
         </Pressable>
       </Pressable>
@@ -132,6 +137,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary.light,
     paddingHorizontal: 12,
     paddingVertical: 6,
+  },
+  challengeButtonDisabled: {
+    opacity: 0.5,
   },
   challengeButtonLabel: {
     ...typography.b4BodySm,

@@ -57,6 +57,10 @@ export default function MemoListScreen() {
 
   // 도전 = 이 할 일을 오늘의 한 개로 설정 (record 도메인) → 성공 시 전역 토스트
   const handleChallenge = async (memo: TaskResponse) => {
+    if (memo.completedToday) {
+      return;
+    }
+
     try {
       await setTodayTask(memo.id);
     } catch (challengeError) {

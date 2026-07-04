@@ -6,6 +6,7 @@ export interface TaskResponse {
   id: number;
   content: string;
   taskType: TaskType;
+  completedToday: boolean;
   displayOrder: number;
   createdAt: string;
 }
