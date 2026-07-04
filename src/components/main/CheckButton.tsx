@@ -23,7 +23,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
-    width: '100%',
+    width: 200,
   },
   text: {
     ...typography.b2BodyBold,
