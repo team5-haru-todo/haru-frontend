@@ -6,7 +6,7 @@ import {
   getWeeklyStreak,
   setTodayTask,
 } from "@/src/api/record";
-import type { TodayResponse, WeeklyStreakResponse } from "@/src/api/record";
+import type { WeeklyStreakResponse } from "@/src/api/record";
 import { updateTask } from "@/src/api/task";
 import type { TaskResponse } from "@/src/api/task";
 import { StatusBarSpacer } from "@/src/components/common/StatusBarSpacer";
@@ -26,8 +26,8 @@ import {
 } from "@/src/constants/mainDummy";
 import { typography } from "@/src/constants/typography";
 import { LinearGradient } from "expo-linear-gradient";
-import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -64,6 +64,9 @@ export default function MainScreen() {
   const savingEditPromiseRef = useRef<Promise<string | null> | null>(null);
   // API 연결 5단계 — UI 표시용이 아니라 중복 완료 요청 방지용 내부 가드
   const [isCompletingTask, setIsCompletingTask] = useState(false);
+  // API 연결 8단계 — handleComplete가 completeToday/completeAdditional 중 무엇을 호출할지 판단하는 기준.
+  // mainState의 "completed"는 이제 currentTask 개별 완료 여부를 뜻하므로, 이 값을 별도로 들고 있어야 한다.
+  const [hasFirstCompletionToday, setHasFirstCompletionToday] = useState(false);
   // TODO: API 연결 1단계 — GET /api/streak/week만 연결. 실패 시 더미값으로 폴백해 화면이 죽지 않게 한다.
   const [weeklyStreak, setWeeklyStreak] = useState<WeeklyStreakResponse | null>(null);
 
@@ -97,25 +100,54 @@ export default function MainScreen() {
     }
   }, [completed, taskContentParam]);
 
-  // API 연결 5단계 — 완료 API가 연결되어 서버 상태를 신뢰할 수 있으므로,
-  // completed param 유무와 무관하게 항상 서버 상태를 재조회한다.
-  // (completed 복귀 시 위 effect의 즉시 반영과 겹쳐 getToday가 한 번 더 불릴 수 있으나,
+  // API 연결 8단계 — mainState는 이제 "오늘 daily record에 첫 완료가 있었는가"가 아니라
+  // "지금 화면에 보여줄 task(currentTask 또는 그 자리의 완료 snapshot)가 완료됐는가"를 기준으로 판단한다.
+  // (completed 복귀 시 아래 focus effect와 겹쳐 getToday가 한 번 더 불릴 수 있으나,
   //  결과가 항상 서버 진짜 상태와 일치하므로 허용한다)
-  useEffect(() => {
-    getToday()
-      .then((data: TodayResponse) => {
-        setCurrentTaskId(data.currentTask?.id ?? null);
-        if (data.currentTask === null) {
-          setMainState("empty");
-          return;
-        }
+  const syncTodayState = useCallback(async () => {
+    try {
+      const data = await getToday();
+      const firstCompletion = data.completedTasks.find((c) => c.completionType === "FIRST") ?? null;
+      setHasFirstCompletionToday(firstCompletion !== null || data.fireEarned || data.firstCompletedAt !== null);
+
+      if (data.currentTask !== null) {
+        const currentTaskCompleted = data.completedTasks.some(
+          (c) => c.taskId === data.currentTask!.id
+        );
+        setCurrentTaskId(data.currentTask.id);
         setTaskContent(data.currentTask.content);
-        setMainState(data.fireEarned || data.firstCompletedAt ? "completed" : "selected");
-      })
-      .catch((error) => {
-        console.error("오늘의 한 개 조회 실패:", error);
-      });
-  }, [completed]);
+        setMainState(currentTaskCompleted ? "completed" : "selected");
+        return;
+      }
+
+      // currentTask가 없어도(예: GENERAL task 완료 후 soft delete), 오늘 FIRST 완료 기록이 있으면
+      // 그 완료 당시 snapshot으로 completed 화면을 계속 보여줘야 empty로 잘못 보이지 않는다.
+      if (firstCompletion !== null) {
+        setCurrentTaskId(null);
+        setTaskContent(firstCompletion.content);
+        setMainState("completed");
+        return;
+      }
+
+      setCurrentTaskId(null);
+      setTaskContent("");
+      setMainState("empty");
+    } catch (error) {
+      console.error("오늘의 한 개 조회 실패:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    syncTodayState();
+  }, [completed, syncTodayState]);
+
+  // API 연결 7단계 — 메모장 전체 화면 등 다른 라우트에서 오늘의 한 개를 바꾸고
+  // 돌아왔을 때도 최신 서버 상태로 갱신되도록, 탭이 다시 focus될 때마다 재조회한다.
+  useFocusEffect(
+    useCallback(() => {
+      syncTodayState();
+    }, [syncTodayState])
+  );
 
   const today = new Date().toLocaleDateString("ko-KR", {
     month: "long",
@@ -203,12 +235,30 @@ export default function MainScreen() {
 
     setIsCompletingTask(true);
     try {
-      const data = await completeToday();
+      if (!hasFirstCompletionToday) {
+        const data = await completeToday();
+        router.push({
+          pathname: "/completion",
+          params: {
+            taskContent: data.completion.content,
+            streakCount: String(data.streak.currentStreak),
+          },
+        });
+        return;
+      }
+
+      if (currentTaskId === null) {
+        console.error("추가 완료 실패: currentTaskId 없음");
+        return;
+      }
+
+      const data = await completeAdditional(currentTaskId);
       router.push({
         pathname: "/completion",
         params: {
           taskContent: data.completion.content,
-          streakCount: String(data.streak.currentStreak),
+          // 추가 완료는 스트릭에 영향 없음(백엔드 확인됨) — 서버 응답에 streak가 없으므로 로컬 값 유지
+          streakCount: String(streakCount),
         },
       });
     } catch (error) {
