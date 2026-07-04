@@ -19,7 +19,6 @@ import { getMySettings, updateMySettings } from '@/src/api/user';
 import { useUserStore } from '@/src/store/userStore';
 import { registerForPushNotifications } from '@/src/services/pushNotifications';
 
-const ICON_AVATAR = require('../../assets/images/Icon/Avatar.png');
 const ICON_ARROW_RIGHT = require('../../assets/images/Icon/Arrow_Right_xs.png');
 
 export default function MyPageScreen() {
@@ -118,7 +117,6 @@ export default function MyPageScreen() {
 
         <View style={styles.profileArea}>
           <View style={styles.profileLeft}>
-            <Image source={ICON_AVATAR} style={styles.avatar} resizeMode="cover" />
             <View style={styles.profileTexts}>
               <Text style={styles.profileName}>{isGuest ? '게스트' : user?.nickname ?? '-'}</Text>
               <Text style={styles.profileAccount}>{isGuest ? '게스트로 로그인됨' : connectedLabel}</Text>
@@ -231,7 +229,6 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   profileLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  avatar: { width: 74, height: 74, borderRadius: 37 },
   profileTexts: { gap: 4 },
   profileName: {
     fontSize: 18,

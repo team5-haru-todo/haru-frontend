@@ -95,6 +95,12 @@ export async function getWeeklyStreak(): Promise<WeeklyStreakResponse> {
   return response.data.data;
 }
 
+// 현재 스트릭과 누적 성공 일수 조회 (record 도메인)
+export async function getStreak(): Promise<StreakSummary> {
+  const response = await apiClient.get<ApiResponse<StreakSummary>>('/api/streak');
+  return response.data.data;
+}
+
 // 오늘 날짜 기준 오늘의 한 개 상태와 완료 목록 조회 (record 도메인)
 export async function getToday(): Promise<TodayResponse> {
   const response = await apiClient.get<ApiResponse<TodayResponse>>('/api/today');
