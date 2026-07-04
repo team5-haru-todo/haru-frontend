@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "1015483618194",
+    "project_id": "haru-pro-91e32",
+    "storage_bucket": "haru-pro-91e32.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1015483618194:android:2b6a7bda4cf583b1b6674b",
+        "android_client_info": {
+          "package_name": "com.team5haru.haru"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCvlC4m5hMn16yod9X9btUwN_WtsV2_7Zk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1015483618194:android:88ef6b18fcac4ccdb6674b",
+        "android_client_info": {
+          "package_name": "com.team5haru.harufrontend"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCvlC4m5hMn16yod9X9btUwN_WtsV2_7Zk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
