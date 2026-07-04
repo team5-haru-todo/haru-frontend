@@ -3,6 +3,7 @@ import {
   getMonthlyCalendar,
   type CalendarRecord,
 } from '@/src/api/calendar';
+import { getStreak, type StreakSummary } from '@/src/api/record';
 import {
   View,
   Text,
@@ -43,6 +44,7 @@ export default function CalendarScreen() {
   const [records, setRecords] = useState<CalendarRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [streak, setStreak] = useState<StreakSummary | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -77,6 +79,22 @@ export default function CalendarScreen() {
       active = false;
     };
   }, [currentYear, currentMonth]);
+
+  useEffect(() => {
+    let active = true;
+
+    getStreak()
+      .then((data) => {
+        if (active) setStreak(data);
+      })
+      .catch((requestError) => {
+        console.error('스트릭 조회 실패:', requestError);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const daysInMonth = getDaysInMonth(currentYear, currentMonth);
   const firstDayOfWeek = getFirstDayOfWeek(currentYear, currentMonth);
@@ -127,8 +145,6 @@ export default function CalendarScreen() {
     ? DAYS_FULL[new Date(currentYear, currentMonth - 1, selectedDay).getDay()].slice(0, 1) + '요일'
     : '';
 
-  const streak = 3;
-
   return (
     <View style={styles.container}>
       <StatusBar style="dark" />
@@ -166,7 +182,7 @@ export default function CalendarScreen() {
           <View style={styles.statDivider} />
           <View style={styles.statCell}>
             <Text style={styles.statLabel}>연속 달성</Text>
-            <Text style={styles.statValue}>{streak}일</Text>
+            <Text style={styles.statValue}>{streak?.currentStreak ?? 0}일</Text>
           </View>
         </View>
 
