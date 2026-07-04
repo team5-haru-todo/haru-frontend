@@ -10,6 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { router } from 'expo-router';
+import * as Linking from 'expo-linking';
 import { StatusBar } from 'expo-status-bar';
 
 import { colors } from '@/src/constants/colors';
@@ -21,6 +22,7 @@ import { registerForPushNotifications } from '@/src/services/pushNotifications';
 
 const ICON_AVATAR = require('../../assets/images/Icon/Avatar.png');
 const ICON_ARROW_RIGHT = require('../../assets/images/Icon/Arrow_Right_xs.png');
+const SUPPORT_EMAIL = 'support@example.com';
 
 export default function MyPageScreen() {
   const user = useUserStore((state) => state.user);
@@ -88,6 +90,19 @@ export default function MyPageScreen() {
       );
     } finally {
       setPushUpdating(false);
+    }
+  };
+
+  const handleContactPress = async () => {
+    const subject = encodeURIComponent('[하루한개] 문의하기');
+    const body = encodeURIComponent('문의 내용을 입력해주세요.\n\n');
+    const mailUrl = `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
+
+    try {
+      await Linking.openURL(mailUrl);
+    } catch (error) {
+      console.error('문의 메일 작성 화면 열기 실패:', error);
+      Alert.alert('메일 앱을 열 수 없어요', '기기에 메일 앱이 설정되어 있는지 확인해 주세요.');
     }
   };
 
@@ -162,7 +177,11 @@ export default function MyPageScreen() {
             <View style={styles.sectionTitle}>
               <Text style={styles.sectionTitleText}>지원</Text>
             </View>
-            <TouchableOpacity style={styles.listItem} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.listItem}
+              activeOpacity={0.7}
+              onPress={handleContactPress}
+            >
               <Text style={styles.listItemText}>문의하기</Text>
               <Image source={ICON_ARROW_RIGHT} style={styles.listIcon} />
             </TouchableOpacity>
