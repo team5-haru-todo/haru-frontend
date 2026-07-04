@@ -11,11 +11,21 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.team5haru.harufrontend",
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "entitlements": {
+        "aps-environment": "development"
+      },
       "infoPlist": {
+        "UIBackgroundModes": [
+          "remote-notification"
+        ],
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "usesAppleSignIn": true
     },
     "android": {
+      "package": "com.team5haru.harufrontend",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -23,8 +33,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
-      "package": "com.team5haru.harufrontend"
+      "predictiveBackGestureEnabled": false
     },
     "web": {
       "output": "static",
@@ -50,6 +59,17 @@
         {
           "kakaoAppKey": "75104b1eb83f956da04aaf559cd3ead7",
           "kotlinVersion": "2.0.0"
+        }
+      ],
+      "expo-notifications",
+      "@react-native-firebase/app",
+      "@react-native-firebase/messaging",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
         }
       ]
     ],

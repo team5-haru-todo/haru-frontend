@@ -19,6 +19,12 @@ export interface KakaoLoginRequest {
   agreedAt: string;
 }
 
+export interface AppleLoginRequest {
+  identityToken: string;
+  termsVersion: string;
+  agreedAt: string;
+}
+
 export async function loginAsGuest(): Promise<LoginResponse> {
   const response = await apiClient.post('/api/auth/guest');
   return response.data.data;
@@ -26,6 +32,11 @@ export async function loginAsGuest(): Promise<LoginResponse> {
 
 export async function loginWithKakao(request: KakaoLoginRequest): Promise<LoginResponse> {
   const response = await apiClient.post('/api/auth/kakao', request);
+  return response.data.data;
+}
+
+export async function loginWithApple(request: AppleLoginRequest): Promise<LoginResponse> {
+  const response = await apiClient.post('/api/auth/apple', request);
   return response.data.data;
 }
 

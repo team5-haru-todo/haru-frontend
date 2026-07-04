@@ -5,8 +5,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { login as kakaoLogin } from '@react-native-seoul/kakao-login';
-import { loginAsGuest, loginWithKakao } from '@/src/api/auth';
+import { loginAsGuest, loginWithApple, loginWithKakao } from '@/src/api/auth';
 import { useUserStore } from '@/src/store/userStore';
 
 const KAKAO_ICON = require('../../assets/images/Icon/KaKao.png');
@@ -65,6 +66,46 @@ export default function LoginScreen() {
     }
   };
 
+  const handleAppleLogin = async () => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      // 1. Apple 네이티브 로그인 UI로 로그인, identityToken(JWT) 받기
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+
+      if (!credential.identityToken) {
+        throw new Error('Apple identityToken을 받지 못했습니다.');
+      }
+
+      // 2. identityToken을 우리 백엔드로 전달, 서버에서 Apple 공개키로 검증 후 자체 JWT 발급받기
+      const { accessToken } = await loginWithApple({
+        identityToken: credential.identityToken,
+        termsVersion: TEMP_TERMS_VERSION,
+        agreedAt: new Date().toISOString(),
+      });
+
+      if (Platform.OS !== 'web') {
+        await SecureStore.setItemAsync('authToken', accessToken);
+      }
+      await fetchUser();
+      router.replace('/(tabs)');
+    } catch (error: any) {
+      if (error?.code === 'ERR_REQUEST_CANCELED') {
+        // 사용자가 직접 취소한 경우 - 에러 처리 불필요
+      } else {
+        console.error('Apple 로그인 실패:', error);
+        // TODO: 에러 발생 시 사용자에게 보여줄 알림 UI 추가 필요
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar style="dark" />
@@ -110,10 +151,18 @@ export default function LoginScreen() {
               <Text style={styles.btnKakaoText}>카카오로 시작하기</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.btnApple} activeOpacity={0.8}>
-              <Image source={APPLE_ICON} style={styles.btnIcon} />
-              <Text style={styles.btnAppleText}>Apple로 시작하기</Text>
-            </TouchableOpacity>
+            {/* Apple 로그인은 iOS에서만 제공 (Android엔 네이티브 UI 없음) */}
+            {Platform.OS === 'ios' && (
+              <TouchableOpacity
+                style={styles.btnApple}
+                activeOpacity={0.8}
+                onPress={handleAppleLogin}
+                disabled={loading}
+              >
+                <Image source={APPLE_ICON} style={styles.btnIcon} />
+                <Text style={styles.btnAppleText}>Apple로 시작하기</Text>
+              </TouchableOpacity>
+            )}
 
             {/* 게스트 버튼 */}
             <TouchableOpacity
