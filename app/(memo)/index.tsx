@@ -2,9 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import {
-  NestedReorderableList,
-  ScrollViewContainer,
+import ReorderableList, {
   useReorderableDrag,
   type ReorderableListReorderEvent,
 } from 'react-native-reorderable-list';
@@ -18,6 +16,28 @@ import { useMemos } from '@/src/hooks/useMemos';
 import { useToastStore } from '@/src/store/toastStore';
 import { colors, radius, spacing, typography } from '@/src/constants';
 
+// 헤더/입력/메모를 하나의 드래그 리스트에 담기 위한 아이템 타입 (nesting 제거용)
+type MemoListItem =
+  | { type: 'header'; key: string; title: string; section: TaskResponse['taskType']; spaced: boolean }
+  | { type: 'input'; key: string }
+  | { type: 'memo'; key: string; memo: TaskResponse };
+
+// 재정렬된 플랫 리스트를 훑어, 각 메모가 현재 어느 섹션에 속하는지 계산.
+// 즐겨찾기 라벨은 리스트 밖(ListHeaderComponent) 고정이라 시작 섹션은 RECURRING,
+// data에 남는 '전체' 헤더를 만나면 GENERAL로 전환 (문구가 아니라 header.section으로 판단).
+function extractOrderedMemos(items: MemoListItem[]) {
+  let currentSection: TaskResponse['taskType'] = 'RECURRING';
+  const result: { memo: TaskResponse; section: TaskResponse['taskType'] }[] = [];
+  for (const item of items) {
+    if (item.type === 'header') {
+      currentSection = item.section;
+    } else if (item.type === 'memo') {
+      result.push({ memo: item.memo, section: currentSection });
+    }
+  }
+  return result;
+}
+
 function DraggableMemoRow(props: MemoCardProps) {
   const drag = useReorderableDrag();
   return <MemoCard {...props} onLongPress={drag} />;
@@ -26,16 +46,8 @@ function DraggableMemoRow(props: MemoCardProps) {
 export default function MemoListScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const {
-    memos,
-    loading,
-    error,
-    addMemo,
-    editMemo,
-    removeMemo,
-    toggleMemoRecurring,
-    reorderMemosByType,
-  } = useMemos();
+  const { memos, loading, error, addMemo, editMemo, removeMemo, toggleMemoRecurring, reorderMemos } =
+    useMemos();
   const [isAdding, setIsAdding] = useState(false);
   const [memoText, setMemoText] = useState('');
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
@@ -137,11 +149,70 @@ export default function MemoListScreen() {
     onChallenge: handleChallenge,
   };
 
-  const renderReorderableRow = ({ item }: { item: TaskResponse }) => (
-    <View style={styles.dragItem}>
-      <DraggableMemoRow memo={item} isEditing={editingId === item.id} {...memoRowHandlers} />
-    </View>
-  );
+  // 즐겨찾기 라벨은 ListHeaderComponent(고정)로 빼고 카드만 data에 둔다.
+  // 중간 '전체' 라벨만 셀로 남긴다 (섹션 경계 표시용).
+  const listItems: MemoListItem[] = [];
+  pinnedMemos.forEach((memo) => listItems.push({ type: 'memo', key: `memo-${memo.id}`, memo }));
+  listItems.push({
+    type: 'header',
+    key: 'header-general',
+    title: '전체',
+    section: 'GENERAL',
+    spaced: pinnedMemos.length > 0,
+  });
+  if (isAdding) {
+    listItems.push({ type: 'input', key: 'input' });
+  }
+  unpinnedMemos.forEach((memo) => listItems.push({ type: 'memo', key: `memo-${memo.id}`, memo }));
+
+  // 드래그: 섹션 넘김 = 핀 변경(RECURRING↔GENERAL). 즐겨찾기 라벨이 고정 헤더라 "무섹션" 케이스가 없어
+  // 모든 드롭을 그대로 수용한다(거부/되돌림 없음 → stuck 없음).
+  const handleReorder = ({ from, to }: ReorderableListReorderEvent) => {
+    if (from === to) {
+      return;
+    }
+    const reordered = [...listItems];
+    const [moved] = reordered.splice(from, 1);
+    reordered.splice(to, 0, moved);
+    if (moved.type !== 'memo') {
+      return; // 헤더/입력은 드래그 핸들이 없어 실제로는 발생하지 않음
+    }
+    const orderedWithSection = extractOrderedMemos(reordered);
+    const newOrdered = orderedWithSection.map((entry) => ({
+      ...entry.memo,
+      taskType: entry.section,
+    }));
+    const movedEntry = orderedWithSection.find((entry) => entry.memo.id === moved.memo.id);
+    const pinChanged = movedEntry ? movedEntry.section !== moved.memo.taskType : false;
+    reorderMemos(
+      newOrdered,
+      pinChanged && movedEntry
+        ? { id: moved.memo.id, recurring: movedEntry.section === 'RECURRING' }
+        : undefined
+    );
+  };
+
+  const renderListItem = ({ item }: { item: MemoListItem }) => {
+    if (item.type === 'header') {
+      return (
+        <Text style={[styles.sectionLabel, item.spaced && styles.sectionLabelSpaced]}>
+          {item.title}
+        </Text>
+      );
+    }
+    if (item.type === 'input') {
+      return <View style={styles.dragItem}>{renderInput()}</View>;
+    }
+    return (
+      <View style={styles.dragItem}>
+        <DraggableMemoRow
+          memo={item.memo}
+          isEditing={editingId === item.memo.id}
+          {...memoRowHandlers}
+        />
+      </View>
+    );
+  };
 
   return (
     <View style={styles.root}>
@@ -170,39 +241,21 @@ export default function MemoListScreen() {
             </Text>
           </View>
         ) : (
-          <ScrollViewContainer
+          <ReorderableList
+            data={listItems}
+            keyExtractor={(item) => item.key}
+            onReorder={handleReorder}
+            renderItem={renderListItem}
             style={styles.scroll}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}>
-            {error && <Text style={styles.errorText}>요청을 처리하지 못했어요</Text>}
-            {pinnedMemos.length > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionLabel}>즐겨찾기</Text>
-                <NestedReorderableList
-                  data={pinnedMemos}
-                  scrollable={false}
-                  keyExtractor={(item) => String(item.id)}
-                  onReorder={({ from, to }: ReorderableListReorderEvent) =>
-                    reorderMemosByType('RECURRING', from, to)
-                  }
-                  renderItem={renderReorderableRow}
-                />
-              </View>
-            )}
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>전체</Text>
-              {isAdding && renderInput()}
-              <NestedReorderableList
-                data={unpinnedMemos}
-                scrollable={false}
-                keyExtractor={(item) => String(item.id)}
-                onReorder={({ from, to }: ReorderableListReorderEvent) =>
-                  reorderMemosByType('GENERAL', from, to)
-                }
-                renderItem={renderReorderableRow}
-              />
-            </View>
-          </ScrollViewContainer>
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            ListHeaderComponent={
+              <>
+                {error && <Text style={styles.errorText}>요청을 처리하지 못했어요</Text>}
+                {pinnedMemos.length > 0 && <Text style={styles.sectionLabel}>즐겨찾기</Text>}
+              </>
+            }
+          />
         )}
       </View>
 
@@ -269,6 +322,7 @@ const styles = StyleSheet.create({
     ...typography.c1Caption,
     color: colors.text.tertiary,
     textAlign: 'center',
+    marginBottom: 8,
   },
   listWrapper: {
     width: '100%',
@@ -278,21 +332,23 @@ const styles = StyleSheet.create({
   scroll: {
     flex: 1,
   },
-  scrollContent: {
-    gap: 24,
+  listContent: {
+    // Figma: Content_Area 좌우10 + 섹션 박스 padding10 = 20, 첫 라벨 위 = content pt16 + 섹션 pt10 = 26
+    paddingHorizontal: 10,
+    paddingTop: 10,
     paddingBottom: 10,
   },
   dragItem: {
-    marginBottom: 8,
-  },
-  section: {
-    width: '100%',
-    padding: 10,
-    gap: 8,
+    marginBottom: 8, // Figma: 섹션 내부 gap 8
   },
   sectionLabel: {
     ...typography.c1Caption,
     color: colors.text.tertiary,
+    marginBottom: 8, // Figma: 라벨 → 카드 gap 8
+  },
+  sectionLabelSpaced: {
+    // Figma: 섹션 사이 = 섹션 pb10 + Content_Area gap24 + 섹션 pt10 = 44 (앞 카드 marginBottom 8 + 36)
+    marginTop: 36,
   },
   input: {
     width: '100%',

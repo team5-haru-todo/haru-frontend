@@ -8,7 +8,7 @@ import {
   updateTask,
   updateTaskOrder,
 } from '@/src/api/task';
-import type { TaskResponse, TaskType } from '@/src/api/task';
+import type { TaskResponse } from '@/src/api/task';
 
 function sortTasks(tasks: TaskResponse[]) {
   return [...tasks].sort((a, b) => a.displayOrder - b.displayOrder);
@@ -96,22 +96,29 @@ export function useMemos() {
     }
   }, []);
 
-  // 한 섹션(RECURRING 또는 GENERAL)의 재정렬된 배열을 받아 서버에 저장한다.
-  // displayOrder는 즐겨찾기(먼저) → 전체 순으로 0부터 다시 매긴다.
-  const reorderMemosByType = useCallback(
-    async (taskType: TaskType, from: number, to: number) => {
-      setError(null);
+  // 재정렬된 전체 메모 순서를 받아 저장한다. 섹션을 넘긴 항목이 있으면 pinChange로 핀(taskType)도 변경.
+  // (ordered에는 각 메모의 새 taskType이 반영돼 있어야 하고, 즐겨찾기 먼저 순서는 호출부에서 보장한다)
+  const reorderMemos = useCallback(
+    async (ordered: TaskResponse[], pinChange?: { id: number; recurring: boolean }) => {
       const previous = memos;
-      const pinned = memos.filter((memo) => memo.taskType === 'RECURRING');
-      const unpinned = memos.filter((memo) => memo.taskType !== 'RECURRING');
-      const target = taskType === 'RECURRING' ? [...pinned] : [...unpinned];
-      const [moved] = target.splice(from, 1);
-      target.splice(to, 0, moved);
-      const merged =
-        taskType === 'RECURRING' ? [...target, ...unpinned] : [...pinned, ...target];
-      const reindexed = merged.map((memo, index) => ({ ...memo, displayOrder: index }));
-      setMemos(reindexed); // 낙관적 반영
+      const reindexed = ordered.map((memo, index) => ({ ...memo, displayOrder: index }));
+      // 낙관적 반영. 순서를 안 바꾼 되돌림 케이스에도 리스트를 원위치로 되돌리는 용도로 항상 세팅.
+      setMemos(reindexed);
+      const unchanged =
+        !pinChange &&
+        ordered.length === previous.length &&
+        ordered.every(
+          (memo, index) =>
+            memo.id === previous[index].id && memo.taskType === previous[index].taskType
+        );
+      if (unchanged) {
+        return true; // 순서·핀 그대로 → 서버 저장 생략
+      }
+      setError(null);
       try {
+        if (pinChange) {
+          await changeTaskRecurring(pinChange.id, pinChange.recurring);
+        }
         await updateTaskOrder(
           reindexed.map((memo) => ({ taskId: memo.id, displayOrder: memo.displayOrder }))
         );
@@ -135,6 +142,6 @@ export function useMemos() {
     editMemo,
     removeMemo,
     toggleMemoRecurring,
-    reorderMemosByType,
+    reorderMemos,
   };
 }
