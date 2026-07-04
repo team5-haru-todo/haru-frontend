@@ -38,14 +38,11 @@ import {
 } from "react-native";
 
 type MainState = "empty" | "selected" | "editing" | "completed";
-type MemoPreviewMode = "selectTodayTask" | "additionalComplete";
 
 export default function MainScreen() {
   // TODO: 백엔드 user 도메인에서 신규 사용자 여부 확인 후 초기값 교체
   const [showNotificationModal, setShowNotificationModal] = useState(true);
   const [showMemoPreview, setShowMemoPreview] = useState(false);
-  // API 연결 6단계 — MemoPreviewSheet가 열린 목적(오늘의 한 개 선택 vs 추가 완료)을 구분
-  const [memoPreviewMode, setMemoPreviewMode] = useState<MemoPreviewMode>("selectTodayTask");
   // API 연결 6단계 — UI 표시용이 아니라 중복 선택 방지용 내부 가드
   const [isSelectingMemoTask, setIsSelectingMemoTask] = useState(false);
   const [mainState, setMainState] = useState<MainState>("empty");
@@ -107,8 +104,8 @@ export default function MainScreen() {
   const syncTodayState = useCallback(async () => {
     try {
       const data = await getToday();
-      const firstCompletion = data.completedTasks.find((c) => c.completionType === "FIRST") ?? null;
-      setHasFirstCompletionToday(firstCompletion !== null || data.fireEarned || data.firstCompletedAt !== null);
+      const hasFirstCompletion = data.completedTasks.some((c) => c.completionType === "FIRST");
+      setHasFirstCompletionToday(hasFirstCompletion || data.fireEarned || data.firstCompletedAt !== null);
 
       if (data.currentTask !== null) {
         const currentTaskCompleted = data.completedTasks.some(
@@ -120,11 +117,23 @@ export default function MainScreen() {
         return;
       }
 
-      // currentTask가 없어도(예: GENERAL task 완료 후 soft delete), 오늘 FIRST 완료 기록이 있으면
-      // 그 완료 당시 snapshot으로 completed 화면을 계속 보여줘야 empty로 잘못 보이지 않는다.
-      if (firstCompletion !== null) {
+      // currentTask가 없어도(예: GENERAL task 완료 후 soft delete), 오늘 완료 기록이 있으면
+      // completedAt이 가장 최근인 completion snapshot으로 completed 화면을 보여준다.
+      // FIRST 고정 시 추가 완료한 GENERAL task가 soft delete되어 currentTask가 null이 되는 경우에도
+      // 방금 완료한 task가 아니라 첫 완료 task로 되돌아가 버리는 문제가 있었다.
+      let latestCompletion: (typeof data.completedTasks)[number] | null = null;
+      for (const completion of data.completedTasks) {
+        if (
+          latestCompletion === null ||
+          new Date(completion.completedAt) > new Date(latestCompletion.completedAt)
+        ) {
+          latestCompletion = completion;
+        }
+      }
+
+      if (latestCompletion !== null) {
         setCurrentTaskId(null);
-        setTaskContent(firstCompletion.content);
+        setTaskContent(latestCompletion.content);
         setMainState("completed");
         return;
       }
@@ -275,13 +284,12 @@ export default function MainScreen() {
 
   // Empty 상태의 Link_ChooseFromMemo — 오늘의 한 개를 메모장에서 고르는 흐름
   const handleOpenMemoPreviewForSelect = () => {
-    setMemoPreviewMode("selectTodayTask");
     setShowMemoPreview(true);
   };
 
-  // Completed 상태의 "하루 한개 더하기" — 추가 완료 흐름 (CompletionMessage는 무수정)
+  // Completed 상태의 "하루 한개 더하기" — 메모장에서 고른 task를 새 오늘의 한 개로 설정하는 흐름.
+  // 완료 기록(completeAdditional)은 여기서 만들지 않고, selected로 전환된 뒤 handleComplete에서만 만든다.
   const handleExtra = () => {
-    setMemoPreviewMode("additionalComplete");
     setShowMemoPreview(true);
   };
 
@@ -289,23 +297,15 @@ export default function MainScreen() {
     if (isSelectingMemoTask) return;
     setIsSelectingMemoTask(true);
     try {
-      if (memoPreviewMode === "selectTodayTask") {
-        const data = await setTodayTask(memo.id);
-        if (data.currentTask) {
-          setTaskContent(data.currentTask.content);
-          setCurrentTaskId(data.currentTask.id);
-        }
-        setMainState("selected");
-      } else {
-        await completeAdditional(memo.id);
-        // 추가 완료는 streak/currentTask/mainState에 영향 없음(백엔드 확인됨) — 상태 변경 불필요
+      const data = await setTodayTask(memo.id);
+      if (data.currentTask) {
+        setTaskContent(data.currentTask.content);
+        setCurrentTaskId(data.currentTask.id);
       }
+      setMainState("selected");
       setShowMemoPreview(false);
     } catch (error) {
-      console.error(
-        memoPreviewMode === "selectTodayTask" ? "오늘의 한 개 설정 실패:" : "추가 완료 실패:",
-        error
-      );
+      console.error("오늘의 한 개 설정 실패:", error);
       // 실패 시 시트 유지 — 재시도 가능
     } finally {
       setIsSelectingMemoTask(false);
