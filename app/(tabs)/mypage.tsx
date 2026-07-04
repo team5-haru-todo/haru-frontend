@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Image,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -16,14 +17,17 @@ import { layout } from '@/src/constants/layout';
 import { StatusBarSpacer } from '@/src/components/common/StatusBarSpacer';
 import { getMySettings, updateMySettings } from '@/src/api/user';
 import { useUserStore } from '@/src/store/userStore';
+import { registerForPushNotifications } from '@/src/services/pushNotifications';
 
 const ICON_AVATAR = require('../../assets/images/Icon/Avatar.png');
-const ICON_ARROW_RIGHT = require('../../assets/images/Icon/Arrow_right.png');
+const ICON_ARROW_RIGHT = require('../../assets/images/Icon/Arrow_Right_xs.png');
 
 export default function MyPageScreen() {
   const user = useUserStore((state) => state.user);
   const fetchUser = useUserStore((state) => state.fetchUser);
+  const isGuest = user?.status === 'GUEST';
   const [pushEnabled, setPushEnabled] = useState(true);
+  const [pushUpdating, setPushUpdating] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -51,13 +55,40 @@ export default function MyPageScreen() {
   }, []);
 
   const handleTogglePush = async () => {
-    const next = !pushEnabled;
-    setPushEnabled(next);
+    if (pushUpdating) return;
+
+    // 끄기: 서버 설정만 갱신
+    if (pushEnabled) {
+      setPushEnabled(false);
+      try {
+        await updateMySettings(false);
+      } catch (error) {
+        console.error('푸시알림 설정 변경 실패:', error);
+        setPushEnabled(true);
+      }
+      return;
+    }
+
+    // 켜기: 권한 요청 + 디바이스 토큰 등록까지 완료돼야 켜짐
+    setPushUpdating(true);
     try {
-      await updateMySettings(next);
+      const registered = await registerForPushNotifications();
+      if (!registered) {
+        Alert.alert(
+          '알림 권한이 필요해요',
+          '설정 앱에서 하루한개의 알림 권한을 허용해 주세요.',
+        );
+        return;
+      }
+      setPushEnabled(true);
     } catch (error) {
-      console.error('푸시알림 설정 변경 실패:', error);
-      setPushEnabled(!next);
+      console.error('푸시 알림 등록 실패:', error);
+      Alert.alert(
+        '알림을 설정하지 못했어요',
+        '원격 알림은 Expo Go가 아닌 Development Build에서 설정할 수 있어요.',
+      );
+    } finally {
+      setPushUpdating(false);
     }
   };
 
@@ -89,19 +120,16 @@ export default function MyPageScreen() {
           <View style={styles.profileLeft}>
             <Image source={ICON_AVATAR} style={styles.avatar} resizeMode="cover" />
             <View style={styles.profileTexts}>
-              <Text style={styles.profileName}>{user?.nickname ?? '-'}</Text>
-              <Text style={styles.profileAccount}>{connectedLabel}</Text>
+              <Text style={styles.profileName}>{isGuest ? '게스트' : user?.nickname ?? '-'}</Text>
+              <Text style={styles.profileAccount}>{isGuest ? '게스트로 로그인됨' : connectedLabel}</Text>
             </View>
           </View>
           <TouchableOpacity
             style={styles.accountBtn}
             activeOpacity={0.7}
-            onPress={() => {
-              // TODO: 계정관리 화면 라우트 생성 후 연결
-              console.log('계정 관리 화면 — 라우트 미생성');
-            }}
+            onPress={() => router.push('/account-management')}
           >
-            <Text style={styles.accountBtnText}>계정 관리</Text>
+            <Text style={styles.accountBtnText}>{isGuest ? '계정 연결하기' : '계정 관리'}</Text>
           </TouchableOpacity>
         </View>
 
@@ -116,12 +144,17 @@ export default function MyPageScreen() {
               <Text style={styles.listItemText}>푸쉬알림</Text>
               <TouchableOpacity
                 accessibilityRole="switch"
-                accessibilityState={{ checked: pushEnabled }}
+                accessibilityState={{ checked: pushEnabled, disabled: pushUpdating }}
                 activeOpacity={0.8}
                 onPress={handleTogglePush}
+                disabled={pushUpdating}
                 style={[styles.toggle, pushEnabled ? styles.toggleOn : styles.toggleOff]}
               >
-                <View style={[styles.toggleKnob, pushEnabled ? styles.toggleKnobOn : styles.toggleKnobOff]} />
+                {pushUpdating ? (
+                  <ActivityIndicator size="small" color={colors.text.tertiary} style={styles.toggleSpinner} />
+                ) : (
+                  <View style={[styles.toggleKnob, pushEnabled ? styles.toggleKnobOn : styles.toggleKnobOff]} />
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -300,10 +333,15 @@ const styles = StyleSheet.create({
   },
   toggleKnobOn: { right: 2 },
   toggleKnobOff: { left: 2 },
+  toggleSpinner: {
+    position: 'absolute',
+    top: 2,
+    left: 12,
+  },
   versionText: {
     fontSize: 11,
     fontFamily: 'Pretendard-Regular',
     color: colors.text.tertiary,
-    lineHeight: 14,
+    lineHeight: 24,
   },
 });

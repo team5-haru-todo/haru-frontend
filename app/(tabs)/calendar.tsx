@@ -1,4 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import {
+  getMonthlyCalendar,
+  type CalendarRecord,
+} from '@/src/api/calendar';
 import {
   View,
   Text,
@@ -6,6 +10,7 @@ import {
   ScrollView,
   StyleSheet,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
@@ -21,28 +26,6 @@ const ICON_CHECK_EMPTY = require('../../assets/images/Icon/Ic_Check_Cal_Ip.png')
 const DAYS_KO = ['일', '월', '화', '수', '목', '금', '토'];
 const DAYS_FULL = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
 
-const MOCK_COMPLETED: Record<string, number[]> = {
-  '2026-6': [1, 12, 15, 22, 29],
-};
-
-const MOCK_MONTHLY_COMPLETION_COUNTS: Record<string, number> = {
-  '2026-6': 12,
-};
-
-const MOCK_COMPLETED_COUNTS: Record<string, number> = {
-  '2026-6-11': 3,
-};
-
-const MOCK_TODOS: Record<string, { id: number; text: string }[]> = {
-  '2026-6-11': [
-    { id: 1, text: '헬스장 등록하기' },
-    { id: 2, text: '분리수거하기' },
-  ],
-  '2026-6-12': [
-    { id: 1, text: '운동하기' },
-    { id: 2, text: '독서하기' },
-  ],
-};
 
 function getDaysInMonth(year: number, month: number) {
   return new Date(year, month, 0).getDate();
@@ -56,13 +39,51 @@ export default function CalendarScreen() {
   const today = new Date();
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(today.getMonth() + 1);
-  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const [selectedDay, setSelectedDay] = useState<number | null>(today.getDate());
+  const [records, setRecords] = useState<CalendarRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    async function fetchCalendar() {
+      setLoading(true);
+      setError(null);
+      setRecords([]);
+
+      try {
+        const data = await getMonthlyCalendar(currentYear, currentMonth);
+
+        if (active) {
+          setRecords(data);
+        }
+      } catch (requestError) {
+        console.error('캘린더 조회 실패:', requestError);
+
+        if (active) {
+          setError('캘린더 기록을 불러오지 못했어요.');
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    }
+
+    fetchCalendar();
+
+    return () => {
+      active = false;
+    };
+  }, [currentYear, currentMonth]);
 
   const daysInMonth = getDaysInMonth(currentYear, currentMonth);
   const firstDayOfWeek = getFirstDayOfWeek(currentYear, currentMonth);
-  const completedDays = MOCK_COMPLETED[`${currentYear}-${currentMonth}`] ?? [];
-  const monthlyCompletionCount =
-    MOCK_MONTHLY_COMPLETION_COUNTS[`${currentYear}-${currentMonth}`] ?? completedDays.length;
+  const completedDays = records
+    .filter((record) => record.fireEarned)
+    .map((record) => Number(record.date.slice(8, 10)));
+  const monthlyCompletionCount = completedDays.length;
 
   const isToday = (day: number) =>
     day === today.getDate() &&
@@ -90,12 +111,17 @@ export default function CalendarScreen() {
   const weeks: (number | null)[][] = [];
   for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
 
-  const selectedTodos =
-    selectedDay ? (MOCK_TODOS[`${currentYear}-${currentMonth}-${selectedDay}`] ?? []) : [];
-
-  const selectedCompletedCount = selectedDay
-    ? (MOCK_COMPLETED_COUNTS[`${currentYear}-${currentMonth}-${selectedDay}`] ?? selectedTodos.length)
-    : 0;
+  const selectedDate = selectedDay
+    ? `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`
+    : null;
+  const selectedRecord = selectedDate
+    ? records.find((record) => record.date === selectedDate)
+    : undefined;
+  const selectedTodos = selectedRecord?.completedTasks.map((task) => ({
+    id: task.completionId,
+    text: task.content,
+  })) ?? [];
+  const selectedCompletedCount = selectedTodos.length;
 
   const selectedDayName = selectedDay
     ? DAYS_FULL[new Date(currentYear, currentMonth - 1, selectedDay).getDay()].slice(0, 1) + '요일'
@@ -119,6 +145,17 @@ export default function CalendarScreen() {
             <Image source={ICON_ARROW_RIGHT} style={styles.navIcon} />
           </TouchableOpacity>
         </View>
+
+        {loading && (
+          <View style={styles.feedbackRow}>
+            <ActivityIndicator color={colors.primary.default} />
+            <Text style={styles.feedbackText}>캘린더 기록을 불러오는 중이에요.</Text>
+          </View>
+        )}
+
+        {error && !loading && (
+          <Text style={[styles.feedbackText, styles.errorText]}>{error}</Text>
+        )}
 
         {/* Card_AchieveSummary: gap=12, px=16, py=12, items-center, justify-center */}
         <View style={styles.statsCard}>
@@ -147,9 +184,9 @@ export default function CalendarScreen() {
           {/* Calendar_Grid: flex-col, gap=10, items-center, justify-center */}
           <View style={styles.calGrid}>
             {weeks.map((week, wi) => {
-              // TodayBadge: Figma → position absolute in Row_Week
-              // right: 309 - colIndex*50 (Row 350px, cell 50px, badge 32px)
-              // top: -11px
+              // TodayBadge: Figma → position absolute in Row_Week, centered over the
+              // today column. Computed as a percentage of the row's own width (not a
+              // fixed 390px-screen pixel value) so it stays centered on any device width.
               const todayColIdx = week.findIndex(
                 (d) => d !== null && isToday(d as number)
               );
@@ -157,11 +194,11 @@ export default function CalendarScreen() {
               return (
                 // Row_Week: flex, items-center, align-self stretch, position relative
                 <View key={wi} style={styles.weekRow}>
-                  {/* TodayBadge: absolute in Row_Week, Figma: right=309-colIdx*50, top=-11 */}
+                  {/* TodayBadge: absolute in Row_Week, centered over today's column */}
                   {todayColIdx >= 0 && (
                     <View style={[
                       styles.todayBadgeWrap,
-                      { right: 309 - todayColIdx * 50, top: -11 },
+                      { left: `${((todayColIdx + 0.5) / 7) * 100}%`, marginLeft: -16, top: -11 },
                     ]}>
                       <View style={styles.todayBadge}>
                         <Text style={styles.todayText}>오늘</Text>
@@ -477,5 +514,23 @@ const styles = StyleSheet.create({
     color: colors.text.placeholder,
     textAlign: 'center',
     paddingVertical: 20,
+  },
+  feedbackRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+  },
+  feedbackText: {
+    fontSize: 14,
+    fontFamily: 'Pretendard-Regular',
+    color: colors.text.tertiary,
+    textAlign: 'center',
+  },
+  errorText: {
+    color: '#D14343',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
   },
 });

@@ -8,7 +8,7 @@ import { layout } from '@/src/constants/layout';
 import { StatusBarSpacer } from '@/src/components/common/StatusBarSpacer';
 
 const ICON_ARROW_LEFT = require('../assets/images/Icon/Arrow_left.png');
-const ICON_ARROW_RIGHT = require('../assets/images/Icon/Arrow_right.png');
+const ICON_ARROW_RIGHT = require('../assets/images/Icon/Arrow_Right_xs.png');
 
 const ITEMS = [
   { key: 'terms', label: '(필수) 서비스 이용약관' },

@@ -29,6 +29,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -36,6 +37,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { registerForPushNotifications } from "@/src/services/pushNotifications";
 
 type MainState = "empty" | "selected" | "editing" | "completed";
 
@@ -66,6 +68,8 @@ export default function MainScreen() {
   const [hasFirstCompletionToday, setHasFirstCompletionToday] = useState(false);
   // TODO: API 연결 1단계 — GET /api/streak/week만 연결. 실패 시 더미값으로 폴백해 화면이 죽지 않게 한다.
   const [weeklyStreak, setWeeklyStreak] = useState<WeeklyStreakResponse | null>(null);
+  // develop 병합 — 푸시 알림 등록 진행 중 여부(NotificationPermissionModal의 agreeing 표시용)
+  const [registeringPush, setRegisteringPush] = useState(false);
 
   useEffect(() => {
     getWeeklyStreak()
@@ -316,11 +320,30 @@ export default function MainScreen() {
     setShowNotificationModal(false);
   };
 
-  const handleAgreeNotification = () => {
-    // TODO: 알림 권한 요청 (expo-notifications requestPermissionsAsync)
-    // TODO: 기기 토큰 등록 API 연결 (notification 도메인 POST /device-tokens)
-    // TODO: 사용자 알림 설정 저장 (user 도메인 PATCH /users/settings)
-    setShowNotificationModal(false);
+  const handleAgreeNotification = async () => {
+    setRegisteringPush(true);
+
+    try {
+      const registered = await registerForPushNotifications();
+
+      if (!registered) {
+        Alert.alert(
+          '알림 권한이 필요해요',
+          '설정 앱에서 하루한개의 알림 권한을 허용해 주세요.',
+        );
+        return;
+      }
+
+      setShowNotificationModal(false);
+    } catch (error) {
+      console.error('푸시 알림 등록 실패:', error);
+      Alert.alert(
+        '알림을 설정하지 못했어요',
+        '원격 알림은 Expo Go가 아닌 Development Build에서 설정할 수 있어요.',
+      );
+    } finally {
+      setRegisteringPush(false);
+    }
   };
 
   return (
@@ -387,6 +410,7 @@ export default function MainScreen() {
         visible={showNotificationModal}
         onSkip={handleSkipNotification}
         onAgree={handleAgreeNotification}
+        agreeing={registeringPush}
       />
       <MemoPreviewSheet
         visible={showMemoPreview}
@@ -410,6 +434,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: spacing.xl,
+    paddingBottom: layout.tabBarHeight,
   },
   header: {
     flexDirection: "row",
