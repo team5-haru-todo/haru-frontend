@@ -3,11 +3,8 @@ import { router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL;
-
-if (!BASE_URL) {
-  throw new Error('EXPO_PUBLIC_API_URL is not set');
-}
+const BASE_URL =
+  process.env.EXPO_PUBLIC_API_URL || 'https://hurricane-duct-unselfish.ngrok-free.dev';
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,
