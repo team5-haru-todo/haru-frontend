@@ -71,7 +71,9 @@
             "useFrameworks": "static"
           }
         }
-      ]
+      ],
+      "./plugins/withFirebaseStaticFramework",
+      "./plugins/withFirebaseStaticFramework"
     ],
     "experiments": {
       "typedRoutes": true,
