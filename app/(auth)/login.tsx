@@ -1,17 +1,22 @@
 import { colors, radius, spacing, typography } from '@/src/constants';
-import { Image, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
+import { Animated, Easing, Image, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { login as kakaoLogin } from '@react-native-seoul/kakao-login';
+import { LinearGradient } from 'expo-linear-gradient';
 import { loginAsGuest, loginWithApple, loginWithKakao } from '@/src/api/auth';
 import { useUserStore } from '@/src/store/userStore';
+import { HomeIndicatorSpacer } from '@/src/components/common/HomeIndicatorSpacer';
+
+const AnimatedGradient = Animated.createAnimatedComponent(LinearGradient);
 
 const KAKAO_ICON = require('../../assets/images/Icon/KaKao.png');
 const APPLE_ICON = require('../../assets/images/Icon/Apple.png');
+const LOGO_ICON = require('../../assets/images/logo.png');
 
 // TODO: 약관 화면(terms.tsx) 정식 연동 전까지 임시 고정값 사용
 const TEMP_TERMS_VERSION = 'v1.0';
@@ -20,6 +25,28 @@ export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(false);
   const fetchUser = useUserStore((state) => state.fetchUser);
+
+  // 배경 그라디언트 움직임용
+  const gradientOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(gradientOpacity, {
+          toValue: 1,
+          duration: 6000,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: false,
+        }),
+        Animated.timing(gradientOpacity, {
+          toValue: 0,
+          duration: 6000,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: false,
+        }),
+      ])
+    ).start();
+  }, []);
 
   const handleGuestLogin = async () => {
     if (loading) return;
@@ -108,6 +135,21 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
+      {/* 배경 그라디언트 레이어 1 (고정) */}
+      <LinearGradient
+        colors={['#FFFFFF', colors.primary.light]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      {/* 배경 그라디언트 레이어 2 (opacity 애니메이션으로 교차) */}
+      <AnimatedGradient
+  colors={['#B8DFFF', '#FFFFFF']} // 더 진한 스카이블루 ↔ 흰색
+  start={{ x: 1, y: 0 }}
+  end={{ x: 0, y: 1 }}
+  style={[StyleSheet.absoluteFill, { opacity: gradientOpacity }]}
+/>
+
       <StatusBar style="dark" />
 
       {/* 1. 상단 고정 바 (Figma 54px) */}
@@ -124,11 +166,11 @@ export default function LoginScreen() {
 
         {/* Middle_Area */}
         <View style={styles.middleArea}>
-          <View style={styles.logo} />
+          <Image source={LOGO_ICON} style={styles.logo} resizeMode="contain" />
         </View>
 
         {/* Bottom_Area */}
-        <View style={[styles.bottomArea, { paddingBottom: Math.max(insets.bottom, 24) }]}>
+        <View style={styles.bottomArea}>
           <View style={styles.bottomContentGroup}>
             {/* 툴팁 */}
             <View style={styles.tooltipContainer}>
@@ -179,6 +221,8 @@ export default function LoginScreen() {
         </View>
 
       </View>
+
+      <HomeIndicatorSpacer />
     </View>
   );
 }
@@ -186,23 +230,19 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.surface.default,
   },
   statusBarSpacer: {
     width: '100%',
   },
   contentArea: {
     flex: 1,
+    justifyContent: 'space-between',
   },
 
   topArea: {
-    flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
     paddingTop: 80,
-    paddingBottom: 20,
-    paddingLeft: 20,
-    paddingRight: 20,
+    paddingHorizontal: 20,
     gap: spacing.sm,
   },
   title: {
@@ -217,28 +257,23 @@ const styles = StyleSheet.create({
   },
 
   middleArea: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   logo: {
-    width: 200,
-    height: 200,
-    backgroundColor: '#D9D9D9',
-    borderRadius: radius.button,
+    width: 74,
+    height: 140,
   },
 
   bottomArea: {
-    flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
   },
 
   bottomContentGroup: {
     width: '100%',
     alignItems: 'center',
-    paddingLeft: 20,
-    paddingRight: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 24,
     gap: spacing.md,
   },
 
