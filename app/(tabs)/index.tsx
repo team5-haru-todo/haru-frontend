@@ -18,13 +18,14 @@ import { NotificationPermissionModal } from "@/src/components/main/NotificationP
 import { StreakBadge } from "@/src/components/main/StreakBadge";
 import { TodayTaskCard } from "@/src/components/main/TodayTaskCard";
 import { colors } from "@/src/constants/colors";
-import { layout, spacing } from "@/src/constants/layout";
+import { spacing } from "@/src/constants/layout";
 import {
   DUMMY_COMPLETED_DAYS,
   DUMMY_STREAK,
   DUMMY_TODAY_DAY_INDEX,
 } from "@/src/constants/mainDummy";
 import { typography } from "@/src/constants/typography";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -42,6 +43,9 @@ import { registerForPushNotifications } from "@/src/services/pushNotifications";
 type MainState = "empty" | "selected" | "editing" | "completed";
 
 export default function MainScreen() {
+  // 탭 네비게이터가 실제로 렌더링한 탭바 높이(플랫폼별 safe area 보정 포함, app/(tabs)/_layout.tsx 참고)를
+  // 그대로 받아온다 — layout.tabBarHeight 같은 고정값을 중복으로 예약하지 않기 위함.
+  const tabBarHeight = useBottomTabBarHeight();
   // TODO: 백엔드 user 도메인에서 신규 사용자 여부 확인 후 초기값 교체
   const [showNotificationModal, setShowNotificationModal] = useState(true);
   const [showMemoPreview, setShowMemoPreview] = useState(false);
@@ -362,7 +366,7 @@ export default function MainScreen() {
 
             <ScrollView
               style={styles.scrollFlex}
-              contentContainerStyle={styles.scrollContent}
+              contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight }]}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
             >
@@ -434,7 +438,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: spacing.xl,
-    paddingBottom: layout.tabBarHeight,
   },
   header: {
     flexDirection: "row",
@@ -453,6 +456,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     justifyContent: "center",
-    paddingBottom: layout.tabBarHeight,
+    // 실제 paddingBottom은 useBottomTabBarHeight() 값으로 JSX에서 동적으로 부여한다(위 참고).
   },
 });
