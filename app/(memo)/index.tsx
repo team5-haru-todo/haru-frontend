@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import ReorderableList, {
   useReorderableDrag,
   type ReorderableListReorderEvent,
@@ -21,6 +21,11 @@ type MemoListItem =
   | { type: 'header'; key: string; title: string; section: TaskResponse['taskType']; spaced: boolean }
   | { type: 'input'; key: string }
   | { type: 'memo'; key: string; memo: TaskResponse };
+
+const ADD_BUTTON_HEIGHT = 54;
+const ADD_BUTTON_VERTICAL_GAP = spacing.lg;
+const ANDROID_MIN_BOTTOM_INSET = spacing.xl;
+const LIST_BOTTOM_GAP = spacing.lg;
 
 // 재정렬된 플랫 리스트를 훑어, 각 메모가 현재 어느 섹션에 속하는지 계산.
 // 즐겨찾기 라벨은 리스트 밖(ListHeaderComponent) 고정이라 시작 섹션은 RECURRING,
@@ -46,6 +51,9 @@ function DraggableMemoRow(props: MemoCardProps) {
 export default function MemoListScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const bottomInset =
+    Platform.OS === 'android' ? Math.max(insets.bottom, ANDROID_MIN_BOTTOM_INSET) : insets.bottom;
+  const listBottomPadding = ADD_BUTTON_HEIGHT + ADD_BUTTON_VERTICAL_GAP + bottomInset + LIST_BOTTOM_GAP;
   const { memos, loading, error, addMemo, editMemo, removeMemo, toggleMemoRecurring, reorderMemos } =
     useMemos();
   const [isAdding, setIsAdding] = useState(false);
@@ -251,7 +259,7 @@ export default function MemoListScreen() {
             onReorder={handleReorder}
             renderItem={renderListItem}
             style={styles.scroll}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={[styles.listContent, { paddingBottom: listBottomPadding }]}
             showsVerticalScrollIndicator={false}
             ListHeaderComponent={
               <>
@@ -264,7 +272,7 @@ export default function MemoListScreen() {
       </View>
 
       {!loading && !(isAdding && memos.length === 0) && (
-        <View style={[styles.addButtonWrapper, { paddingBottom: insets.bottom }]}>
+        <View style={[styles.addButtonWrapper, { paddingBottom: bottomInset }]}>
           <Pressable style={styles.addButton} onPress={() => setIsAdding(true)}>
             <Ionicons name="add-circle" size={24} color={colors.primary.default} />
             <Text style={styles.addButtonLabel}>할 일 추가</Text>
@@ -378,7 +386,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    height: 54,
+    height: ADD_BUTTON_HEIGHT,
     paddingHorizontal: spacing.xl,
     paddingVertical: 10,
     borderRadius: radius.pill,
