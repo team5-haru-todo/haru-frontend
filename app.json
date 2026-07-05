@@ -7,7 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "harufrontend",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.team5haru.harufrontend",
@@ -68,11 +68,14 @@
         "expo-build-properties",
         {
           "ios": {
-            "useFrameworks": "static"
+            "useFrameworks": "static",
+            "forceStaticLinking": [
+              "RNFBApp",
+              "RNFBMessaging"
+            ]
           }
         }
       ],
-      "./plugins/withFirebaseStaticFramework",
       "./plugins/withFirebaseStaticFramework"
     ],
     "experiments": {
