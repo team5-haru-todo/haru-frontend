@@ -13,6 +13,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const BUBBLE_WIDTH = 160;
 const BUBBLE_HEIGHT = 48;
+const BUBBLE_AREA_HEIGHT = 340;
 
 type BubbleData = {
   id: string;
@@ -20,31 +21,31 @@ type BubbleData = {
   left: number;
   top: number;
   rotate: number;
+  zIndex: number;
 };
 
 const PILE_BUBBLES: BubbleData[] = [
-  { id: 'plant', label: '화분에 물주기', left: 40, top: 130, rotate: -10 },
-  { id: 'clean', label: '방 청소하기', left: 190, top: 145, rotate: 6 },
-  { id: 'toeic', label: '토익 공부하기', left: 30, top: 205, rotate: -4 },
-  { id: 'checkup', label: '건강검진 예약', left: 190, top: 220, rotate: 9 },
-  { id: 'laundry', label: '빨래 개기', left: 60, top: 275, rotate: -7 },
-  { id: 'book', label: '책 30쪽 읽기', left: 210, top: 290, rotate: 5 },
+  { id: 'plant', label: '화분에 물주기', left: 92, top: 54, rotate: -3, zIndex: 1 },
+  { id: 'clean', label: '방 청소하기', left: 100, top: 98, rotate: 4, zIndex: 2 },
+  { id: 'toeic', label: '토익 공부하기', left: 42, top: 156, rotate: -6, zIndex: 3 },
+  { id: 'checkup', label: '건강검진 예약', left: 166, top: 160, rotate: 7, zIndex: 4 },
+  { id: 'laundry', label: '빨래 개기', left: 30, top: 220, rotate: -4, zIndex: 5 },
+  { id: 'book', label: '책 30쪽 읽기', left: 178, top: 226, rotate: 5, zIndex: 6 },
 ];
 
 const FOCUS_BUBBLE = PILE_BUBBLES[0];
 
 const CENTER_LEFT = (SCREEN_WIDTH - BUBBLE_WIDTH) / 2;
-const CENTER_TOP = 64;
+const FOCUS_TOP = -18;
 
 const TARGET_DX = CENTER_LEFT - FOCUS_BUBBLE.left;
-const TARGET_DY = CENTER_TOP - FOCUS_BUBBLE.top;
+const TARGET_DY = FOCUS_TOP - FOCUS_BUBBLE.top;
 
 export default function TutorialPage2({ isActive }: { isActive: boolean }) {
   const focusX = useSharedValue(0);
   const focusY = useSharedValue(0);
   const focusScale = useSharedValue(1);
   const focusRotate = useSharedValue(FOCUS_BUBBLE.rotate);
-  const titleOpacity = useSharedValue(0);
 
   useEffect(() => {
     if (!isActive) {
@@ -52,12 +53,11 @@ export default function TutorialPage2({ isActive }: { isActive: boolean }) {
       focusY.value = 0;
       focusScale.value = 1;
       focusRotate.value = FOCUS_BUBBLE.rotate;
-      titleOpacity.value = 0;
       return;
     }
 
     focusRotate.value = withDelay(
-      600,
+      500,
       withTiming(0, {
         duration: 700,
         easing: Easing.out(Easing.cubic),
@@ -65,7 +65,7 @@ export default function TutorialPage2({ isActive }: { isActive: boolean }) {
     );
 
     focusX.value = withDelay(
-      600,
+      500,
       withTiming(TARGET_DX, {
         duration: 700,
         easing: Easing.out(Easing.cubic),
@@ -73,7 +73,7 @@ export default function TutorialPage2({ isActive }: { isActive: boolean }) {
     );
 
     focusY.value = withDelay(
-      600,
+      500,
       withTiming(TARGET_DY, {
         duration: 700,
         easing: Easing.out(Easing.cubic),
@@ -81,20 +81,13 @@ export default function TutorialPage2({ isActive }: { isActive: boolean }) {
     );
 
     focusScale.value = withDelay(
-      600,
-      withTiming(1.18, {
+      500,
+      withTiming(1.12, {
         duration: 700,
         easing: Easing.out(Easing.cubic),
       })
     );
-
-    titleOpacity.value = withDelay(
-      1200,
-      withTiming(1, {
-        duration: 500,
-      })
-    );
-  }, [isActive]);
+  }, [isActive, focusX, focusY, focusScale, focusRotate]);
 
   const focusStyle = useAnimatedStyle(() => ({
     transform: [
@@ -105,19 +98,17 @@ export default function TutorialPage2({ isActive }: { isActive: boolean }) {
     ],
   }));
 
-  const titleStyle = useAnimatedStyle(() => ({
-    opacity: titleOpacity.value,
-  }));
-
   return (
     <View style={[styles.container, { width: SCREEN_WIDTH }]}>
       <View style={styles.topArea}>
-        <Animated.Text style={[styles.title, titleStyle]}>
+        <Text style={styles.title}>
           {"복잡한 생각은 접어두고\n오늘부터 '하루한개'만 해보세요"}
-        </Animated.Text>
+        </Text>
       </View>
 
-      <View style={styles.bubbleArea}>
+      <View style={styles.spacer} />
+
+      <View style={styles.bubblePlayArea}>
         {PILE_BUBBLES.map((b) =>
           b.id === FOCUS_BUBBLE.id ? null : (
             <View
@@ -127,6 +118,8 @@ export default function TutorialPage2({ isActive }: { isActive: boolean }) {
                 {
                   left: b.left,
                   top: b.top,
+                  zIndex: b.zIndex,
+                  elevation: b.zIndex + 6,
                   transform: [{ rotate: `${b.rotate}deg` }],
                 },
               ]}
@@ -147,7 +140,9 @@ export default function TutorialPage2({ isActive }: { isActive: boolean }) {
             focusStyle,
           ]}
         >
-          <Text style={styles.bubbleLabel}>{FOCUS_BUBBLE.label}</Text>
+          <Text style={[styles.bubbleLabel, styles.focusBubbleLabel]}>
+            {FOCUS_BUBBLE.label}
+          </Text>
         </Animated.View>
       </View>
     </View>
@@ -157,13 +152,13 @@ export default function TutorialPage2({ isActive }: { isActive: boolean }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
   },
 
   topArea: {
     paddingTop: 76,
     paddingBottom: 20,
     paddingHorizontal: layout.margin,
+    alignItems: 'center',
   },
 
   title: {
@@ -172,10 +167,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  bubbleArea: {
+  spacer: {
     flex: 1,
+  },
+
+  bubblePlayArea: {
+    height: BUBBLE_AREA_HEIGHT,
     position: 'relative',
     overflow: 'visible',
+    marginBottom: 8,
   },
 
   bubble: {
@@ -190,17 +190,23 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.18,
     shadowRadius: 20,
-    elevation: 6,
   },
 
   focusBubble: {
-    zIndex: 10,
-    shadowOpacity: 0.3,
-    shadowRadius: 24,
+    borderWidth: 1,
+    borderColor: colors.primary.default,
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 20,
+    zIndex: 20,
   },
 
   bubbleLabel: {
     ...typography.b2BodyMedium,
     color: colors.text.primary,
+  },
+
+  focusBubbleLabel: {
+    color: colors.primary.default,
   },
 });

@@ -32,8 +32,13 @@ export default function TutorialScreen() {
     handleFinish();
   };
 
-  const content = (
-    <>
+  return (
+    <LinearGradient
+      colors={['#FFFFFF', colors.primary.light]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 0.96 }}
+      style={styles.contentArea}
+    >
       <View style={{ height: Math.max(insets.top, 54) }} />
 
       <View style={styles.pageArea}>
@@ -44,20 +49,13 @@ export default function TutorialScreen() {
       <View style={styles.bottomArea}>
         <View style={styles.dots}>
           {Array.from({ length: TOTAL_PAGES }).map((_, i) => (
-            <View
-              key={i}
-              style={[styles.dot, i === activeIndex && styles.dotActive]}
-            />
+            <View key={i} style={[styles.dot, i === activeIndex && styles.dotActive]} />
           ))}
         </View>
       </View>
 
       <View style={styles.btnWrapper}>
-        <TouchableOpacity
-          style={styles.btnNext}
-          activeOpacity={0.8}
-          onPress={handleNext}
-        >
+        <TouchableOpacity style={styles.btnNext} activeOpacity={0.8} onPress={handleNext}>
           <Text style={styles.btnNextText}>
             {isLastPage ? '오늘 한개 시작해 볼까요?' : '다음'}
           </Text>
@@ -65,26 +63,7 @@ export default function TutorialScreen() {
       </View>
 
       <HomeIndicatorSpacer />
-    </>
-  );
-
-  if (activeIndex === 0) {
-    return (
-      <LinearGradient
-        colors={['#FFFFFF', colors.primary.light]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0.96 }}
-        style={styles.contentArea}
-      >
-        {content}
-      </LinearGradient>
-    );
-  }
-
-  return (
-    <View style={[styles.contentArea, { backgroundColor: '#FFFFFF' }]}>
-      {content}
-    </View>
+    </LinearGradient>
   );
 }
 
