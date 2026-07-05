@@ -46,6 +46,7 @@ export default function RootLayout() {
           <Stack.Screen name="policy" options={{ headerShown: false }} />
           <Stack.Screen name="policy-detail" options={{ headerShown: false }} />
           <Stack.Screen name="account-management" options={{ headerShown: false }} />
+          <Stack.Screen name="(tutorial)" options={{ headerShown: false }} />
           <Stack.Screen name="withdrawal" options={{ headerShown: false }} />
         </Stack>
         <Toast />

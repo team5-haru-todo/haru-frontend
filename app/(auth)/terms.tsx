@@ -82,7 +82,7 @@ export default function TermsScreen() {
           activeOpacity={0.8}
           onPress={() => {
             // TODO: API 연결 후 — 약관 동의 정보(TERMS_VERSION, agreedAt) 서버에 저장
-            router.replace('/(tabs)');
+            router.replace('/(tutorial)');
           }}
         >
           <Text style={requiredChecked ? styles.btnAgreeTextActive : styles.btnAgreeText}>
