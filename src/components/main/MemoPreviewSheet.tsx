@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
-import { Pressable, StyleSheet, Text, View, Modal } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View, Modal } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import type { TaskResponse } from '@/src/api/task';
@@ -23,6 +24,11 @@ function formatRelativeDays(createdAt: string) {
 export default function MemoPreviewSheet({ visible, onClose, onSelect }: Props) {
   const router = useRouter();
   const { memos, loading, refreshMemos } = useMemos();
+  const insets = useSafeAreaInsets();
+  // iOS는 기존 여백(spacing.lg) 그대로 유지. Android는 시스템 네비게이션 바 높이(insets.bottom)를
+  // 반영해, 고정 여백보다 실제 시스템 바가 큰 기기에서 버튼이 가려지지 않게 한다.
+  const openButtonMarginBottom =
+    Platform.OS === 'android' ? Math.max(insets.bottom, spacing.lg) : spacing.lg;
 
   useEffect(() => {
     if (visible) {
@@ -72,7 +78,10 @@ export default function MemoPreviewSheet({ visible, onClose, onSelect }: Props) 
                 아직 적어둔 할 일이 없어요{'\n'}편하게 적어두고 나중에 꺼내 보세요 🌱
               </Text>
             </View>
-            <Pressable style={styles.openButton} onPress={handleOpenMemo}>
+            <Pressable
+              style={[styles.openButton, { marginBottom: openButtonMarginBottom }]}
+              onPress={handleOpenMemo}
+            >
               <Text style={styles.openButtonLabel}>메모장에 적어보기</Text>
             </Pressable>
           </View>
@@ -92,7 +101,10 @@ export default function MemoPreviewSheet({ visible, onClose, onSelect }: Props) 
                 </View>
               )}
             </View>
-            <Pressable style={styles.openButton} onPress={handleOpenMemo}>
+            <Pressable
+              style={[styles.openButton, { marginBottom: openButtonMarginBottom }]}
+              onPress={handleOpenMemo}
+            >
               <Text style={styles.openButtonLabel}>메모장 열기</Text>
             </Pressable>
           </View>
@@ -200,7 +212,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     height: 54,
     marginHorizontal: spacing.xl,
-    marginVertical: spacing.lg,
+    marginTop: spacing.lg,
+    // marginBottom은 Android navigation bar 대응을 위해 JSX에서 동적으로 부여한다(위 참고).
     borderRadius: radius.pill,
     backgroundColor: colors.primary.default,
   },
