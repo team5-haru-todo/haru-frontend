@@ -1,163 +1,73 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Swipeable } from 'react-native-gesture-handler';
-import {
-  NestableDraggableFlatList,
-  NestableScrollContainer,
-  type RenderItemParams,
-} from 'react-native-draggable-flatlist';
+import { useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import ReorderableList, {
+  useReorderableDrag,
+  type ReorderableListReorderEvent,
+} from 'react-native-reorderable-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { setTodayTask } from '@/src/api/record';
 import type { TaskResponse } from '@/src/api/task';
+import { DeleteMemoModal } from '@/src/components/memo/DeleteMemoModal';
+import { MemoCard, type MemoCardProps } from '@/src/components/memo/MemoCard';
 import { useMemos } from '@/src/hooks/useMemos';
+import { useToastStore } from '@/src/store/toastStore';
 import { colors, radius, spacing, typography } from '@/src/constants';
 
-const pinIcon = require('@/assets/images/memo/pin-icon.png');
-const pinFilledIcon = require('@/assets/images/memo/pin-filled-icon.png');
-const trashIcon = require('@/assets/images/memo/trash-icon.png');
+// 헤더/입력/메모를 하나의 드래그 리스트에 담기 위한 아이템 타입 (nesting 제거용)
+type MemoListItem =
+  | { type: 'header'; key: string; title: string; section: TaskResponse['taskType']; spaced: boolean }
+  | { type: 'input'; key: string }
+  | { type: 'memo'; key: string; memo: TaskResponse };
 
-const TOAST_VISIBLE_MS = 3000;
-const TOAST_FADE_MS = 400;
-
-function formatRelativeDays(createdAt: string) {
-  const createdTime = new Date(createdAt).getTime();
-  if (Number.isNaN(createdTime)) {
-    return '';
+// 재정렬된 플랫 리스트를 훑어, 각 메모가 현재 어느 섹션에 속하는지 계산.
+// 즐겨찾기 라벨은 리스트 밖(ListHeaderComponent) 고정이라 시작 섹션은 RECURRING,
+// data에 남는 '전체' 헤더를 만나면 GENERAL로 전환 (문구가 아니라 header.section으로 판단).
+function extractOrderedMemos(items: MemoListItem[]) {
+  let currentSection: TaskResponse['taskType'] = 'RECURRING';
+  const result: { memo: TaskResponse; section: TaskResponse['taskType'] }[] = [];
+  for (const item of items) {
+    if (item.type === 'header') {
+      currentSection = item.section;
+    } else if (item.type === 'memo') {
+      result.push({ memo: item.memo, section: currentSection });
+    }
   }
-  const days = Math.floor((Date.now() - createdTime) / (1000 * 60 * 60 * 24));
-  return days <= 0 ? '오늘' : `${days}일 전`;
+  return result;
 }
 
-type MemoRowProps = {
-  memo: TaskResponse;
-  isEditing: boolean;
-  editText: string;
-  onChangeEdit: (text: string) => void;
-  onSubmitEdit: () => void;
-  onStartEdit: (memo: TaskResponse) => void;
-  onTogglePin: (memo: TaskResponse) => void;
-  onRequestDelete: (id: number) => void;
-  onChallenge: (memo: TaskResponse) => void;
-  onLongPress?: () => void;
-};
-
-function MemoRow({
-  memo,
-  isEditing,
-  editText,
-  onChangeEdit,
-  onSubmitEdit,
-  onStartEdit,
-  onTogglePin,
-  onRequestDelete,
-  onChallenge,
-  onLongPress,
-}: MemoRowProps) {
-  if (isEditing) {
-    return (
-      <TextInput
-        style={styles.input}
-        value={editText}
-        onChangeText={onChangeEdit}
-        onSubmitEditing={onSubmitEdit}
-        onBlur={onSubmitEdit}
-        returnKeyType="done"
-        cursorColor={colors.primary.default}
-        autoFocus
-      />
-    );
-  }
-  return (
-    <Swipeable
-      overshootRight={false}
-      renderRightActions={() => (
-        <View style={styles.swipeActions}>
-          <Pressable style={styles.pinButton} onPress={() => onTogglePin(memo)}>
-            <Image
-              source={memo.taskType === 'RECURRING' ? pinFilledIcon : pinIcon}
-              style={styles.actionIcon}
-              contentFit="contain"
-            />
-          </Pressable>
-          <Pressable style={styles.deleteButton} onPress={() => onRequestDelete(memo.id)}>
-            <Image source={trashIcon} style={styles.actionIcon} contentFit="contain" />
-          </Pressable>
-        </View>
-      )}>
-      <Pressable style={styles.memoCard} onPress={() => onStartEdit(memo)} onLongPress={onLongPress}>
-        <View style={styles.memoCardContent}>
-          <Text style={styles.memoCardTitle}>{memo.content}</Text>
-          <Text style={styles.memoCardTime}>{formatRelativeDays(memo.createdAt)}</Text>
-        </View>
-        <Pressable style={styles.challengeButton} onPress={() => onChallenge(memo)}>
-          <Text style={styles.challengeButtonLabel}>도전</Text>
-        </Pressable>
-      </Pressable>
-    </Swipeable>
-  );
+function DraggableMemoRow(props: MemoCardProps) {
+  const drag = useReorderableDrag();
+  return <MemoCard {...props} onLongPress={drag} />;
 }
 
 export default function MemoListScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const {
-    memos,
-    loading,
-    error,
-    addMemo,
-    editMemo,
-    removeMemo,
-    toggleMemoRecurring,
-    reorderMemosByType,
-  } = useMemos();
+  const { memos, loading, error, addMemo, editMemo, removeMemo, toggleMemoRecurring, reorderMemos } =
+    useMemos();
   const [isAdding, setIsAdding] = useState(false);
   const [memoText, setMemoText] = useState('');
-  const [toastVisible, setToastVisible] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editText, setEditText] = useState('');
-  const toastOpacity = useRef(new Animated.Value(0)).current;
-  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const editSubmittingRef = useRef(false);
 
-  useEffect(() => {
-    return () => {
-      if (toastTimeoutRef.current) {
-        clearTimeout(toastTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  const showChallengeToast = () => {
-    if (toastTimeoutRef.current) {
-      clearTimeout(toastTimeoutRef.current);
-    }
-    setToastVisible(true);
-    toastOpacity.setValue(1);
-    toastTimeoutRef.current = setTimeout(() => {
-      Animated.timing(toastOpacity, {
-        toValue: 0,
-        duration: TOAST_FADE_MS,
-        useNativeDriver: true,
-      }).start(() => setToastVisible(false));
-    }, TOAST_VISIBLE_MS);
-  };
-
-  // 도전 = 이 할 일을 오늘의 한 개로 설정 (record 도메인)
-  // TODO: 성공 시 메인으로 이동 + 전역 토스트 (네비게이션/토스트는 조율 후 별도 작업)
+  // 도전 = 이 할 일을 오늘의 한 개로 설정 (record 도메인) → 성공 시 전역 토스트
   const handleChallenge = async (memo: TaskResponse) => {
+    if (memo.completedToday) {
+      return;
+    }
+
     try {
       await setTodayTask(memo.id);
     } catch (challengeError) {
       console.error('오늘의 한 개 설정 실패:', challengeError);
       return;
     }
-    showChallengeToast();
+    useToastStore.getState().show('오늘의 한개로 설정했어요');
   };
 
   const handleSubmitMemo = async () => {
@@ -243,11 +153,70 @@ export default function MemoListScreen() {
     onChallenge: handleChallenge,
   };
 
-  const renderDraggableRow = ({ item, drag }: RenderItemParams<TaskResponse>) => (
-    <View style={styles.dragItem}>
-      <MemoRow memo={item} isEditing={editingId === item.id} onLongPress={drag} {...memoRowHandlers} />
-    </View>
-  );
+  // 즐겨찾기 라벨은 ListHeaderComponent(고정)로 빼고 카드만 data에 둔다.
+  // 중간 '전체' 라벨만 셀로 남긴다 (섹션 경계 표시용).
+  const listItems: MemoListItem[] = [];
+  pinnedMemos.forEach((memo) => listItems.push({ type: 'memo', key: `memo-${memo.id}`, memo }));
+  listItems.push({
+    type: 'header',
+    key: 'header-general',
+    title: '전체',
+    section: 'GENERAL',
+    spaced: pinnedMemos.length > 0,
+  });
+  if (isAdding) {
+    listItems.push({ type: 'input', key: 'input' });
+  }
+  unpinnedMemos.forEach((memo) => listItems.push({ type: 'memo', key: `memo-${memo.id}`, memo }));
+
+  // 드래그: 섹션 넘김 = 핀 변경(RECURRING↔GENERAL). 즐겨찾기 라벨이 고정 헤더라 "무섹션" 케이스가 없어
+  // 모든 드롭을 그대로 수용한다(거부/되돌림 없음 → stuck 없음).
+  const handleReorder = ({ from, to }: ReorderableListReorderEvent) => {
+    if (from === to) {
+      return;
+    }
+    const reordered = [...listItems];
+    const [moved] = reordered.splice(from, 1);
+    reordered.splice(to, 0, moved);
+    if (moved.type !== 'memo') {
+      return; // 헤더/입력은 드래그 핸들이 없어 실제로는 발생하지 않음
+    }
+    const orderedWithSection = extractOrderedMemos(reordered);
+    const newOrdered = orderedWithSection.map((entry) => ({
+      ...entry.memo,
+      taskType: entry.section,
+    }));
+    const movedEntry = orderedWithSection.find((entry) => entry.memo.id === moved.memo.id);
+    const pinChanged = movedEntry ? movedEntry.section !== moved.memo.taskType : false;
+    reorderMemos(
+      newOrdered,
+      pinChanged && movedEntry
+        ? { id: moved.memo.id, recurring: movedEntry.section === 'RECURRING' }
+        : undefined
+    );
+  };
+
+  const renderListItem = ({ item }: { item: MemoListItem }) => {
+    if (item.type === 'header') {
+      return (
+        <Text style={[styles.sectionLabel, item.spaced && styles.sectionLabelSpaced]}>
+          {item.title}
+        </Text>
+      );
+    }
+    if (item.type === 'input') {
+      return <View style={styles.dragItem}>{renderInput()}</View>;
+    }
+    return (
+      <View style={styles.dragItem}>
+        <DraggableMemoRow
+          memo={item.memo}
+          isEditing={editingId === item.memo.id}
+          {...memoRowHandlers}
+        />
+      </View>
+    );
+  };
 
   return (
     <View style={styles.root}>
@@ -276,33 +245,21 @@ export default function MemoListScreen() {
             </Text>
           </View>
         ) : (
-          <NestableScrollContainer
+          <ReorderableList
+            data={listItems}
+            keyExtractor={(item) => item.key}
+            onReorder={handleReorder}
+            renderItem={renderListItem}
             style={styles.scroll}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}>
-            {error && <Text style={styles.errorText}>요청을 처리하지 못했어요</Text>}
-            {pinnedMemos.length > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionLabel}>즐겨찾기</Text>
-                <NestableDraggableFlatList
-                  data={pinnedMemos}
-                  keyExtractor={(item) => String(item.id)}
-                  onDragEnd={({ data }) => reorderMemosByType('RECURRING', data)}
-                  renderItem={renderDraggableRow}
-                />
-              </View>
-            )}
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>전체</Text>
-              {isAdding && renderInput()}
-              <NestableDraggableFlatList
-                data={unpinnedMemos}
-                keyExtractor={(item) => String(item.id)}
-                onDragEnd={({ data }) => reorderMemosByType('GENERAL', data)}
-                renderItem={renderDraggableRow}
-              />
-            </View>
-          </NestableScrollContainer>
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            ListHeaderComponent={
+              <>
+                {error && <Text style={styles.errorText}>요청을 처리하지 못했어요</Text>}
+                {pinnedMemos.length > 0 && <Text style={styles.sectionLabel}>즐겨찾기</Text>}
+              </>
+            }
+          />
         )}
       </View>
 
@@ -315,46 +272,11 @@ export default function MemoListScreen() {
         </View>
       )}
 
-      {toastVisible && (
-        <Animated.View
-          style={[styles.toastWrapper, { bottom: insets.bottom + 106, opacity: toastOpacity }]}
-          pointerEvents="none">
-          <LinearGradient
-            colors={['#52565F', '#8A8E99']}
-            start={{ x: 0, y: 1 }}
-            end={{ x: 0, y: 0 }}
-            style={styles.toast}>
-            <View style={styles.toastCheckIcon}>
-              <Ionicons name="checkmark" size={14} color={colors.surface.default} />
-            </View>
-            <Text style={styles.toastLabel}>오늘의 한개로 설정했어요</Text>
-          </LinearGradient>
-        </Animated.View>
-      )}
-
-      <Modal
+      <DeleteMemoModal
         visible={pendingDeleteId !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setPendingDeleteId(null)}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modal}>
-            <Image source={trashIcon} style={styles.actionIcon} contentFit="contain" />
-            <View style={styles.modalTextGroup}>
-              <Text style={styles.modalTitle}>이 메모를 삭제할까요?</Text>
-              <Text style={styles.modalSubtitle}>삭제하면 다시 되돌릴 수 없어요</Text>
-            </View>
-            <View style={styles.modalButtons}>
-              <Pressable style={styles.modalCancelButton} onPress={() => setPendingDeleteId(null)}>
-                <Text style={styles.modalCancelLabel}>취소</Text>
-              </Pressable>
-              <Pressable style={styles.modalConfirmButton} onPress={handleConfirmDelete}>
-                <Text style={styles.modalConfirmLabel}>삭제하기</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        onCancel={() => setPendingDeleteId(null)}
+        onConfirm={handleConfirmDelete}
+      />
     </View>
   );
 }
@@ -404,6 +326,7 @@ const styles = StyleSheet.create({
     ...typography.c1Caption,
     color: colors.text.tertiary,
     textAlign: 'center',
+    marginBottom: 8,
   },
   listWrapper: {
     width: '100%',
@@ -413,21 +336,23 @@ const styles = StyleSheet.create({
   scroll: {
     flex: 1,
   },
-  scrollContent: {
-    gap: 24,
+  listContent: {
+    // Figma: Content_Area 좌우10 + 섹션 박스 padding10 = 20, 첫 라벨 위 = content pt16 + 섹션 pt10 = 26
+    paddingHorizontal: 10,
+    paddingTop: 10,
     paddingBottom: 10,
   },
   dragItem: {
-    marginBottom: 8,
-  },
-  section: {
-    width: '100%',
-    padding: 10,
-    gap: 8,
+    marginBottom: 8, // Figma: 섹션 내부 gap 8
   },
   sectionLabel: {
     ...typography.c1Caption,
     color: colors.text.tertiary,
+    marginBottom: 8, // Figma: 라벨 → 카드 gap 8
+  },
+  sectionLabelSpaced: {
+    // Figma: 섹션 사이 = 섹션 pb10 + Content_Area gap24 + 섹션 pt10 = 44 (앞 카드 marginBottom 8 + 36)
+    marginTop: 36,
   },
   input: {
     width: '100%',
@@ -439,70 +364,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     ...typography.b3BodyRegular,
     color: colors.text.primary,
-  },
-  memoCard: {
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderRadius: radius.button,
-    backgroundColor: colors.surface.default,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  memoCardContent: {
-    flex: 1,
-    gap: 2,
-    padding: 10,
-  },
-  memoCardTitle: {
-    ...typography.b2BodyMedium,
-    color: colors.text.primary,
-  },
-  memoCardTime: {
-    ...typography.c1Caption,
-    color: colors.text.tertiary,
-  },
-  challengeButton: {
-    borderRadius: radius.pill,
-    backgroundColor: colors.primary.light,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  challengeButtonLabel: {
-    ...typography.b4BodySm,
-    color: colors.primary.default,
-  },
-  swipeActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingLeft: 8,
-  },
-  pinButton: {
-    width: 74,
-    height: 74,
-    borderRadius: radius.button,
-    backgroundColor: '#E8E9EC',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  deleteButton: {
-    width: 74,
-    height: 74,
-    borderRadius: radius.button,
-    backgroundColor: '#FFDFDF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  actionIcon: {
-    width: 24,
-    height: 24,
   },
   addButtonWrapper: {
     width: '100%',
@@ -531,100 +392,5 @@ const styles = StyleSheet.create({
   addButtonLabel: {
     ...typography.b3BodyRegular,
     color: colors.text.secondary,
-  },
-  toastWrapper: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-  },
-  toast: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    borderRadius: radius.button,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  toastCheckIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: radius.pill,
-    backgroundColor: colors.primary.default,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  toastLabel: {
-    ...typography.b4BodySm,
-    color: colors.surface.default,
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modal: {
-    width: 291,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 24,
-    borderRadius: radius.card,
-    backgroundColor: colors.surface.default,
-    paddingTop: 30,
-    paddingBottom: 20,
-    paddingHorizontal: 40,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 24,
-    elevation: 8,
-  },
-  modalTextGroup: {
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingHorizontal: 20,
-  },
-  modalTitle: {
-    ...typography.b1Subtitle,
-    color: colors.text.primary,
-    textAlign: 'center',
-  },
-  modalSubtitle: {
-    ...typography.b4BodySm,
-    color: colors.text.primary,
-    textAlign: 'center',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    width: '100%',
-  },
-  modalCancelButton: {
-    flex: 1,
-    height: 54,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12,
-  },
-  modalCancelLabel: {
-    ...typography.b2BodyBold,
-    color: colors.text.tertiary,
-  },
-  modalConfirmButton: {
-    flex: 1,
-    height: 54,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12,
-    backgroundColor: colors.primary.default,
-  },
-  modalConfirmLabel: {
-    ...typography.b2BodyBold,
-    color: colors.surface.default,
   },
 });

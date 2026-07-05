@@ -7,6 +7,8 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
+import { Toast } from '@/src/components/common/Toast';
+
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldPlaySound: true,
@@ -46,6 +48,7 @@ export default function RootLayout() {
           <Stack.Screen name="account-management" options={{ headerShown: false }} />
           <Stack.Screen name="withdrawal" options={{ headerShown: false }} />
         </Stack>
+        <Toast />
         <StatusBar style="auto" />
       </ThemeProvider>
     </GestureHandlerRootView>
