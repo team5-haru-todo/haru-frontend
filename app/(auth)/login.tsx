@@ -30,7 +30,7 @@ export default function LoginScreen() {
         await SecureStore.setItemAsync('authToken', accessToken);
       }
       await fetchUser();
-      router.replace('/(tabs)');
+      router.replace('/(tutorial)');
     } catch (error) {
       console.error('게스트 로그인 실패:', error);
       // TODO: 에러 발생 시 사용자에게 보여줄 알림 UI 추가 필요
@@ -57,7 +57,7 @@ export default function LoginScreen() {
         await SecureStore.setItemAsync('authToken', accessToken);
       }
       await fetchUser();
-      router.replace('/(tabs)');
+      router.replace('/(tutorial)');
     } catch (error) {
       console.error('카카오 로그인 실패:', error);
       // TODO: 에러 발생 시 사용자에게 보여줄 알림 UI 추가 필요
@@ -93,7 +93,7 @@ export default function LoginScreen() {
         await SecureStore.setItemAsync('authToken', accessToken);
       }
       await fetchUser();
-      router.replace('/(tabs)');
+      router.replace('/(tutorial)');
     } catch (error: any) {
       if (error?.code === 'ERR_REQUEST_CANCELED') {
         // 사용자가 직접 취소한 경우 - 에러 처리 불필요
