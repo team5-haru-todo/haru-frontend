@@ -51,17 +51,13 @@ export function CompletionMessage({
 }
 
 const styles = StyleSheet.create({
+  // 카드 아님 — EmptyState/TodayTaskCard와 달리 배경/그림자 없이 메인 화면 배경 위에
+  // 체크 아이콘/문구/스트립/버튼이 개별 배치되는 완료 메시지 레이아웃이다.
   container: {
     alignItems: 'center',
     gap: spacing.lg,
     width: '100%',
     paddingTop: spacing.xxxl,
-    // 배경색은 Figma에서 확인 불가 상태라 추가하지 않음(2단계 "보류" 항목)
-    borderRadius: radius.card,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.13,
-    shadowRadius: 12,
   },
   // Figma TextGroup_Greeting 294x182 hug — 투두 문장 길이가 가변적이라 height 대신 minHeight로 잘림 방지
   greetingGroup: {
