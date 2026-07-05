@@ -9,6 +9,7 @@ import {
 import type { WeeklyStreakResponse } from "@/src/api/record";
 import { updateTask } from "@/src/api/task";
 import type { TaskResponse } from "@/src/api/task";
+import { updateMySettings } from "@/src/api/user";
 import { StatusBarSpacer } from "@/src/components/common/StatusBarSpacer";
 import { CheckButton } from "@/src/components/main/CheckButton";
 import { CompletionMessage } from "@/src/components/main/CompletionMessage";
@@ -18,19 +19,20 @@ import { NotificationPermissionModal } from "@/src/components/main/NotificationP
 import { StreakBadge } from "@/src/components/main/StreakBadge";
 import { TodayTaskCard } from "@/src/components/main/TodayTaskCard";
 import { colors } from "@/src/constants/colors";
-import { spacing } from "@/src/constants/layout";
+import { layout, spacing } from "@/src/constants/layout";
 import {
   DUMMY_COMPLETED_DAYS,
   DUMMY_STREAK,
   DUMMY_TODAY_DAY_INDEX,
 } from "@/src/constants/mainDummy";
 import { typography } from "@/src/constants/typography";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import * as SecureStore from "expo-secure-store";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
+  AppState,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -42,12 +44,40 @@ import { registerForPushNotifications } from "@/src/services/pushNotifications";
 
 type MainState = "empty" | "selected" | "editing" | "completed";
 
+// 알림 설정 팝업을 이 기기에서 이미 본 적 있는지 여부 — 백엔드 user_settings 필드 추가는 추후 논의,
+// 우선은 SecureStore(이미 client.ts의 authToken 저장에 쓰는 것과 동일한 로컬 저장소)로 최초 1회만 관리한다.
+// 앱 삭제/재설치·저장소 초기화 시 다시 뜨는 것은 로컬 저장 방식의 한계로 허용한다.
+const NOTIFICATION_PROMPT_SEEN_KEY = "notificationPromptSeen";
+
+async function getNotificationPromptSeen(): Promise<boolean> {
+  if (Platform.OS === "web") return false; // SecureStore 웹 미지원 — client.ts와 동일한 처리
+  try {
+    const value = await SecureStore.getItemAsync(NOTIFICATION_PROMPT_SEEN_KEY);
+    return value === "true";
+  } catch (error) {
+    console.error("알림 팝업 노출 여부 조회 실패:", error);
+    return false;
+  }
+}
+
+async function markNotificationPromptSeen(): Promise<void> {
+  if (Platform.OS === "web") return;
+  try {
+    await SecureStore.setItemAsync(NOTIFICATION_PROMPT_SEEN_KEY, "true");
+  } catch (error) {
+    console.error("알림 팝업 노출 여부 저장 실패:", error);
+  }
+}
+
+// "오늘의 한 개"는 백엔드가 Asia/Seoul 날짜(record_date) 기준으로 스코핑하므로,
+// 자정이 지났는지 판단할 때도 기기 로컬 날짜가 아니라 KST 기준 날짜로 비교한다.
+function getKstDateKey(): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(new Date());
+}
+
 export default function MainScreen() {
-  // 탭 네비게이터가 실제로 렌더링한 탭바 높이(플랫폼별 safe area 보정 포함, app/(tabs)/_layout.tsx 참고)를
-  // 그대로 받아온다 — layout.tabBarHeight 같은 고정값을 중복으로 예약하지 않기 위함.
-  const tabBarHeight = useBottomTabBarHeight();
-  // TODO: 백엔드 user 도메인에서 신규 사용자 여부 확인 후 초기값 교체
-  const [showNotificationModal, setShowNotificationModal] = useState(true);
+  // 최초 1회만 노출 — 초기값은 false로 두고, 마운트 시 SecureStore 조회 결과에 따라 연다(아래 useEffect).
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [showMemoPreview, setShowMemoPreview] = useState(false);
   // API 연결 6단계 — UI 표시용이 아니라 중복 선택 방지용 내부 가드
   const [isSelectingMemoTask, setIsSelectingMemoTask] = useState(false);
@@ -65,6 +95,10 @@ export default function MainScreen() {
   // boolean이 아니라 진행 중인 Promise 자체를 담아서, 나중에 들어온 호출자도 같은 저장 결과를 기다리게 한다
   // (예: onBlur가 먼저 저장을 시작하고 곧바로 완료 버튼 onPress가 들어와도, 완료 쪽이 그 저장을 이어받아 대기).
   const savingEditPromiseRef = useRef<Promise<string | null> | null>(null);
+  // 자정 휘발 판단용 — 마지막으로 syncTodayState가 성공했을 때의 KST 날짜와,
+  // AppState 리스너가 이전/다음 상태 전환(background|inactive → active)을 판단하기 위한 직전 상태.
+  const lastSyncedDateRef = useRef<string | null>(null);
+  const previousAppStateRef = useRef(AppState.currentState);
   // API 연결 5단계 — UI 표시용이 아니라 중복 완료 요청 방지용 내부 가드
   const [isCompletingTask, setIsCompletingTask] = useState(false);
   // API 연결 8단계 — handleComplete가 completeToday/completeAdditional 중 무엇을 호출할지 판단하는 기준.
@@ -81,6 +115,15 @@ export default function MainScreen() {
       .catch((error) => {
         console.error("주간 스트릭 조회 실패:", error);
       });
+  }, []);
+
+  // 이 기기에서 알림 설정 팝업을 이미 본 적 있는지 확인 — 없을 때만(최초 1회) 연다.
+  useEffect(() => {
+    getNotificationPromptSeen().then((seen) => {
+      if (!seen) {
+        setShowNotificationModal(true);
+      }
+    });
   }, []);
 
   const streakCount = weeklyStreak?.currentStreak ?? DUMMY_STREAK;
@@ -112,6 +155,7 @@ export default function MainScreen() {
   const syncTodayState = useCallback(async () => {
     try {
       const data = await getToday();
+      lastSyncedDateRef.current = getKstDateKey();
       const hasFirstCompletion = data.completedTasks.some((c) => c.completionType === "FIRST");
       setHasFirstCompletionToday(hasFirstCompletion || data.fireEarned || data.firstCompletedAt !== null);
 
@@ -165,6 +209,26 @@ export default function MainScreen() {
       syncTodayState();
     }, [syncTodayState])
   );
+
+  // 앱이 background/inactive였다가 active로 복귀했을 때, 그 사이 자정이 지나 KST 날짜가 바뀌었으면
+  // "오늘의 한 개"가 서버 기준으로 휘발된 상태를 반영하기 위해 다시 조회한다.
+  // 매 foreground 복귀마다 무조건 호출하지 않고, 날짜가 실제로 바뀐 경우에만 재조회한다.
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextAppState) => {
+      const cameFromBackground = /inactive|background/.test(previousAppStateRef.current);
+      if (cameFromBackground && nextAppState === "active") {
+        const currentDateKey = getKstDateKey();
+        if (lastSyncedDateRef.current !== null && lastSyncedDateRef.current !== currentDateKey) {
+          syncTodayState();
+        }
+      }
+      previousAppStateRef.current = nextAppState;
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [syncTodayState]);
 
   const today = new Date().toLocaleDateString("ko-KR", {
     month: "long",
@@ -320,31 +384,59 @@ export default function MainScreen() {
     }
   };
 
-  const handleSkipNotification = () => {
+  const handleSkipNotification = async () => {
+    // 거절/닫기 — registerForPushNotifications는 호출하지 않는다.
+    // 계정 생성 시 기본값이 pushEnabled=true라서, 서버에 false 저장이 "성공"해야만
+    // 최초 1회 기록을 남기고 팝업을 닫는다. 실패하면 재시도할 수 있도록 팝업을 유지한다.
+    try {
+      await updateMySettings(false);
+    } catch (error) {
+      console.error('푸시 알림 설정(OFF) 저장 실패:', error);
+      Alert.alert('알림 설정 저장에 실패했습니다.', '다시 시도해주세요.');
+      return;
+    }
     setShowNotificationModal(false);
+    await markNotificationPromptSeen();
   };
 
   const handleAgreeNotification = async () => {
     setRegisteringPush(true);
-
     try {
-      const registered = await registerForPushNotifications();
+      let registered = false;
 
-      if (!registered) {
+      try {
+        registered = await registerForPushNotifications();
+
+        if (!registered) {
+          Alert.alert(
+            '알림 권한이 필요해요',
+            '마이페이지에서 언제든 다시 설정할 수 있어요.',
+          );
+        }
+      } catch (error) {
+        console.error('푸시 알림 등록 실패:', error);
         Alert.alert(
-          '알림 권한이 필요해요',
-          '설정 앱에서 하루한개의 알림 권한을 허용해 주세요.',
+          '알림을 설정하지 못했어요',
+          '마이페이지에서 언제든 다시 설정할 수 있어요.',
         );
-        return;
       }
 
+      if (!registered) {
+        // 권한 거부/등록 실패면 registerForPushNotifications 내부에서 pushEnabled=true를 저장하지
+        // 않으므로, 계정 생성 시 기본값(true)이 그대로 남지 않도록 여기서 false로 맞춘다.
+        // 이 저장이 성공해야만 최초 1회 기록을 남기고 팝업을 닫는다.
+        try {
+          await updateMySettings(false);
+        } catch (updateError) {
+          console.error('푸시 알림 설정(OFF) 저장 실패:', updateError);
+          Alert.alert('알림 설정 저장에 실패했습니다.', '다시 시도해주세요.');
+          return;
+        }
+      }
+
+      // 성공(registered===true)한 경우는 이미 registerForPushNotifications가 true로 저장했다.
       setShowNotificationModal(false);
-    } catch (error) {
-      console.error('푸시 알림 등록 실패:', error);
-      Alert.alert(
-        '알림을 설정하지 못했어요',
-        '원격 알림은 Expo Go가 아닌 Development Build에서 설정할 수 있어요.',
-      );
+      await markNotificationPromptSeen();
     } finally {
       setRegisteringPush(false);
     }
@@ -366,7 +458,7 @@ export default function MainScreen() {
 
             <ScrollView
               style={styles.scrollFlex}
-              contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight }]}
+              contentContainerStyle={styles.scrollContent}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
             >
@@ -456,6 +548,8 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     justifyContent: "center",
-    // 실제 paddingBottom은 useBottomTabBarHeight() 값으로 JSX에서 동적으로 부여한다(위 참고).
+    // 중앙 정렬 기준은 실제 탭바 safe area 포함 높이가 아니라 디자인 기준 tabBarHeight를 사용한다.
+    // Android 탭바 자체의 safe area 처리는 app/(tabs)/_layout.tsx에서 별도로 한다.
+    paddingBottom: layout.tabBarHeight,
   },
 });

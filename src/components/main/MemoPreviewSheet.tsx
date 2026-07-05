@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View, Modal } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
@@ -36,6 +36,7 @@ export default function MemoPreviewSheet({ visible, onClose, onSelect }: Props) 
     }
   }, [visible, refreshMemos]);
 
+  // 완료 화면/Empty 상태 공용 미리보기 — 즐겨찾기/전체 각각 최대 2개까지만 보여준다.
   const pinnedMemos = memos.filter((m) => m.taskType === 'RECURRING').slice(0, 2);
   const unpinnedMemos = memos.filter((m) => m.taskType !== 'RECURRING').slice(0, 2);
   const hasMemos = memos.length > 0;
@@ -87,7 +88,12 @@ export default function MemoPreviewSheet({ visible, onClose, onSelect }: Props) 
           </View>
         ) : (
           <View style={styles.contentBg}>
-            <View style={styles.listViewport}>
+            <ScrollView
+              style={styles.listViewport}
+              contentContainerStyle={styles.listContent}
+              nestedScrollEnabled
+              showsVerticalScrollIndicator={false}
+            >
               {pinnedMemos.length > 0 && (
                 <View style={styles.section}>
                   <Text style={styles.sectionLabel}>즐겨찾기</Text>
@@ -100,7 +106,7 @@ export default function MemoPreviewSheet({ visible, onClose, onSelect }: Props) 
                   {unpinnedMemos.map(renderCard)}
                 </View>
               )}
-            </View>
+            </ScrollView>
             <Pressable
               style={[styles.openButton, { marginBottom: openButtonMarginBottom }]}
               onPress={handleOpenMemo}
@@ -143,12 +149,20 @@ const styles = StyleSheet.create({
   },
   contentBg: {
     flex: 1,
+    // flex:1만으로는 자식(ScrollView)이 콘텐츠 크기만큼 커지려는 기본 동작을 못 막아
+    // sheet의 overflow:'hidden'에 잘리기만 하고 스크롤이 안 생기는 문제가 있었다.
+    // minHeight:0으로 "부모가 준 공간보다 작아질 수 있다"는 하한을 명시한다.
+    minHeight: 0,
     backgroundColor: colors.surface.sunken,
   },
   listViewport: {
     flex: 1,
+    minHeight: 0,
+  },
+  listContent: {
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
+    paddingBottom: spacing.md,
     gap: spacing.lg,
   },
   section: {
