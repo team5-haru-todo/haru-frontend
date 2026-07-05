@@ -19,7 +19,7 @@ export default function TutorialScreen() {
   const [activeIndex, setActiveIndex] = useState(0);
 
   const handleFinish = () => {
-    router.replace('/(main)');
+    router.replace('/(tabs)');
   };
 
   const handleNext = () => {
