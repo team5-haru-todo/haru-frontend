@@ -1,28 +1,44 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Image, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Image, ActivityIndicator, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import { login as kakaoLogin } from '@react-native-seoul/kakao-login';
 
 import { colors } from '@/src/constants/colors';
 import { StatusBarSpacer } from '@/src/components/common/StatusBarSpacer';
 import { ConfirmDialog } from '@/src/components/common/ConfirmDialog';
 import { GuestLogoutDialog } from '@/src/components/common/GuestLogoutDialog';
 import { getMe, UserResponse } from '@/src/api/user';
-import { logout } from '@/src/api/auth';
+import { logout, linkKakao, linkApple } from '@/src/api/auth';
 
 const ICON_ARROW_LEFT = require('../assets/images/Icon/Arrow_left.png');
 const ICON_ARROW_RIGHT = require('../assets/images/Icon/Arrow_Right_xs.png');
 
+// TODO: 약관 화면(terms.tsx) 정식 연동 전까지 임시 고정값 사용
+const TEMP_TERMS_VERSION = 'v1.0';
+
 export default function AccountManagementScreen() {
   const [user, setUser] = useState<UserResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [linking, setLinking] = useState(false);
   const [logoutDialogVisible, setLogoutDialogVisible] = useState(false);
   const isGuest = user?.status === 'GUEST';
 
+  const fetchData = async () => {
+    try {
+      const me = await getMe();
+      setUser(me);
+    } catch (error) {
+      console.error('계정 정보 조회 실패:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     let isMounted = true;
-
-    async function fetchData() {
+    (async () => {
       try {
         const me = await getMe();
         if (isMounted) setUser(me);
@@ -31,9 +47,7 @@ export default function AccountManagementScreen() {
       } finally {
         if (isMounted) setLoading(false);
       }
-    }
-
-    fetchData();
+    })();
     return () => {
       isMounted = false;
     };
@@ -58,6 +72,58 @@ export default function AccountManagementScreen() {
       await logout();
     } catch (error) {
       console.error('로그아웃 실패:', error);
+    }
+  };
+
+  const handleLinkKakao = async () => {
+    if (linking) return;
+    setLinking(true);
+    try {
+      const kakaoToken = await kakaoLogin();
+      await linkKakao({
+        accessToken: kakaoToken.accessToken,
+        termsVersion: TEMP_TERMS_VERSION,
+        agreedAt: new Date().toISOString(),
+      });
+      await fetchData();
+    } catch (error) {
+      console.error('카카오 계정 연동 실패:', error);
+      // TODO: 에러 발생 시 사용자에게 보여줄 알림 UI 추가 필요 (이미 연동된 계정인 경우 등)
+    } finally {
+      setLinking(false);
+    }
+  };
+
+  const handleLinkApple = async () => {
+    if (linking) return;
+    setLinking(true);
+    try {
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+
+      if (!credential.identityToken) {
+        throw new Error('Apple identityToken을 받지 못했습니다.');
+      }
+
+      await linkApple({
+        identityToken: credential.identityToken,
+        termsVersion: TEMP_TERMS_VERSION,
+        agreedAt: new Date().toISOString(),
+      });
+      await fetchData();
+    } catch (error: any) {
+      if (error?.code === 'ERR_REQUEST_CANCELED') {
+        // 사용자가 직접 취소한 경우 - 에러 처리 불필요
+      } else {
+        console.error('Apple 계정 연동 실패:', error);
+        // TODO: 에러 발생 시 사용자에게 보여줄 알림 UI 추가 필요
+      }
+    } finally {
+      setLinking(false);
     }
   };
 
@@ -107,14 +173,26 @@ export default function AccountManagementScreen() {
               <View style={styles.sectionTitle}>
                 <Text style={styles.sectionTitleText}>계정 연동</Text>
               </View>
-              <TouchableOpacity style={styles.listItem} activeOpacity={0.7}>
+              <TouchableOpacity
+                style={styles.listItem}
+                activeOpacity={0.7}
+                onPress={handleLinkKakao}
+                disabled={linking}
+              >
                 <Text style={styles.listItemText}>카카오 계정 연동하기</Text>
                 <Image source={ICON_ARROW_RIGHT} style={styles.listIcon} />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.listItem} activeOpacity={0.7}>
-                <Text style={styles.listItemText}>Apple 계정 연동하기</Text>
-                <Image source={ICON_ARROW_RIGHT} style={styles.listIcon} />
-              </TouchableOpacity>
+              {Platform.OS === 'ios' && (
+                <TouchableOpacity
+                  style={styles.listItem}
+                  activeOpacity={0.7}
+                  onPress={handleLinkApple}
+                  disabled={linking}
+                >
+                  <Text style={styles.listItemText}>Apple 계정 연동하기</Text>
+                  <Image source={ICON_ARROW_RIGHT} style={styles.listIcon} />
+                </TouchableOpacity>
+              )}
             </View>
           </>
         )}
@@ -166,7 +244,6 @@ const styles = StyleSheet.create({
   loadingContainer: { justifyContent: 'center', alignItems: 'center' },
   scroll: { flexGrow: 1 },
 
-  // NavBar: h=56, border-bottom 2px #F7F7F7, px=20
   navBar: {
     position: 'relative',
     height: 56,
@@ -198,7 +275,6 @@ const styles = StyleSheet.create({
   },
   icon: { width: 24, height: 24, resizeMode: 'contain' },
 
-  // Profile_Area: h=122, border-bottom 1px #E8E9EC, px20 py24, items-center
   profileArea: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -225,10 +301,8 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 
-  // Divider_Section: h=12, #F4F5F7
   sectionDivider: { height: 12, backgroundColor: '#F4F5F7', width: '100%' },
 
-  // Settings_List (게스트 계정 연동 섹션): border-bottom 1px #E8E9EC, pb24
   settingsList: {
     flexDirection: 'column',
     alignItems: 'flex-start',
@@ -270,7 +344,6 @@ const styles = StyleSheet.create({
   },
   listIcon: { width: 24, height: 24, resizeMode: 'contain' },
 
-  // Content_Area: gap=16, pt=24, pb=12, px=20, items-center
   contentArea: {
     flexDirection: 'column',
     alignItems: 'center',
