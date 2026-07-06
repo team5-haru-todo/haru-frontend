@@ -1,4 +1,8 @@
 import { colors } from "@/src/constants/colors";
+import {
+  EMPTY_STATE_MESSAGES,
+  type EmptyStateMessageLine,
+} from "@/src/constants/emptyStateMessages";
 import { radius, spacing } from "@/src/constants/layout";
 import { typography } from "@/src/constants/typography";
 import { useState } from "react";
@@ -16,17 +20,36 @@ type Props = {
   onChooseFromMemo: () => void;
 };
 
+function renderMessageLine(line: EmptyStateMessageLine) {
+  if (!line.quoted) {
+    return line.prefix;
+  }
+  return (
+    <>
+      {line.prefix}
+      {"'"}
+      <Text style={styles.accent}>{line.quoted}</Text>
+      {"'"}
+      {line.suffix}
+    </>
+  );
+}
+
 export function EmptyState({ onSubmit, onChooseFromMemo }: Props) {
   const [inputText, setInputText] = useState("");
+  // 화면 진입(mount) 시 1회만 랜덤 선택 — 타이핑 등 리렌더로는 다시 뽑히지 않는다.
+  const [message] = useState(
+    () => EMPTY_STATE_MESSAGES[Math.floor(Math.random() * EMPTY_STATE_MESSAGES.length)]
+  );
   const hasText = inputText.trim().length > 0;
 
   return (
     <View style={styles.wrapper}>
       <View style={styles.card}>
         <Text style={styles.greeting}>
-          딱 하나만 해도 괜찮아요,{"\n"}오늘의 {"'"}
-          <Text style={styles.accent}>한개</Text>
-          {"'"}를 적어볼까요?
+          {renderMessageLine(message.line1)}
+          {"\n"}
+          {renderMessageLine(message.line2)}
         </Text>
 
         <View style={styles.inputActionGroup}>
@@ -102,7 +125,9 @@ const styles = StyleSheet.create({
     // alignSelf:'stretch'(부모 폭에 맞춰 늘어남)로 부모 폭을 채운 뒤 marginHorizontal로 좌우 4px씩 줄인다.
     alignSelf: "stretch",
     marginHorizontal: 4,
-    height: 350,
+    // 랜덤 문구 중 2줄이 넘어가는 긴 문구가 있어 height 고정 대신 minHeight로 바꿔,
+    // 기존 문구 기준 크기(350)는 그대로 유지하면서 긴 문구는 카드가 자연스럽게 늘어나게 한다.
+    minHeight: 350,
   },
   greeting: {
     ...typography.t1Title1,
