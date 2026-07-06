@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 
 import type { TaskResponse } from '@/src/api/task';
-import { colors, radius, typography } from '@/src/constants';
+import { colors, layout, radius, typography } from '@/src/constants';
 
 const pinIcon = require('@/assets/images/memo/pin-icon.png');
 const pinFilledIcon = require('@/assets/images/memo/pin-filled-icon.png');
@@ -95,14 +95,16 @@ export function MemoCard({
 const styles = StyleSheet.create({
   input: {
     width: '100%',
+    height: layout.memoInputHeight,
     borderWidth: 1,
     borderColor: colors.primary.default,
     borderRadius: radius.button,
     backgroundColor: colors.surface.default,
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 0,
     ...typography.b3BodyRegular,
     color: colors.text.primary,
+    textAlignVertical: 'center',
   },
   memoCard: {
     width: '100%',
