@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
 import {
   getMonthlyCalendar,
   type CalendarRecord,
@@ -45,6 +46,17 @@ export default function CalendarScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [streak, setStreak] = useState<StreakSummary | null>(null);
+
+  // 탭 화면은 전환해도 언마운트되지 않아 다른 달을 보던 상태가 남는다.
+  // 탭이 다시 focus될 때마다 오늘 기준 연/월/일로 되돌려, 캘린더에 들어오면 항상 이번 달이 보이게 한다.
+  useFocusEffect(
+    useCallback(() => {
+      const now = new Date();
+      setCurrentYear(now.getFullYear());
+      setCurrentMonth(now.getMonth() + 1);
+      setSelectedDay(now.getDate());
+    }, [])
+  );
 
   useEffect(() => {
     let active = true;
