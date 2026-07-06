@@ -14,7 +14,7 @@ import { DeleteMemoModal } from '@/src/components/memo/DeleteMemoModal';
 import { MemoCard, type MemoCardProps } from '@/src/components/memo/MemoCard';
 import { useMemos } from '@/src/hooks/useMemos';
 import { useToastStore } from '@/src/store/toastStore';
-import { colors, radius, spacing, typography } from '@/src/constants';
+import { colors, layout, radius, spacing, typography } from '@/src/constants';
 
 // 헤더/입력/메모를 하나의 드래그 리스트에 담기 위한 아이템 타입 (nesting 제거용)
 type MemoListItem =
@@ -23,7 +23,6 @@ type MemoListItem =
   | { type: 'memo'; key: string; memo: TaskResponse };
 
 const ADD_BUTTON_HEIGHT = 54;
-const MEMO_INPUT_HEIGHT = 54;
 const ADD_BUTTON_VERTICAL_GAP = spacing.lg;
 const ANDROID_MIN_BOTTOM_INSET = spacing.xl;
 const LIST_BOTTOM_GAP = spacing.lg;
@@ -365,7 +364,7 @@ const styles = StyleSheet.create({
   },
   input: {
     width: '100%',
-    height: MEMO_INPUT_HEIGHT,
+    height: layout.memoInputHeight,
     borderWidth: 1,
     borderColor: colors.primary.default,
     borderRadius: radius.button,

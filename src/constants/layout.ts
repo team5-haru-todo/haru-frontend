@@ -10,6 +10,7 @@ export const layout = {
   navBarHeight: 56,
   homeIndicatorHeight: 34,
   tabBarHeight: 88,
+  memoInputHeight: 54,
 };
 
 export const radius = {
