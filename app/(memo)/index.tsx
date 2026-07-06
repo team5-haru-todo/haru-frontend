@@ -23,6 +23,7 @@ type MemoListItem =
   | { type: 'memo'; key: string; memo: TaskResponse };
 
 const ADD_BUTTON_HEIGHT = 54;
+const MEMO_INPUT_HEIGHT = 54;
 const ADD_BUTTON_VERTICAL_GAP = spacing.lg;
 const ANDROID_MIN_BOTTOM_INSET = spacing.xl;
 const LIST_BOTTOM_GAP = spacing.lg;
@@ -364,14 +365,16 @@ const styles = StyleSheet.create({
   },
   input: {
     width: '100%',
+    height: MEMO_INPUT_HEIGHT,
     borderWidth: 1,
     borderColor: colors.primary.default,
     borderRadius: radius.button,
     backgroundColor: colors.surface.default,
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 0,
     ...typography.b3BodyRegular,
     color: colors.text.primary,
+    textAlignVertical: 'center',
   },
   addButtonWrapper: {
     width: '100%',
