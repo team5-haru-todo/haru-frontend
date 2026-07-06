@@ -52,12 +52,12 @@ export default function LoginScreen() {
     if (loading) return;
     setLoading(true);
     try {
-      const { accessToken } = await loginAsGuest();
+      const { accessToken, user } = await loginAsGuest();
       if (Platform.OS !== 'web') {
         await SecureStore.setItemAsync('authToken', accessToken);
       }
       await fetchUser();
-      router.replace('/(tutorial)');
+      router.replace(user.hasSeenOnboarding ? '/(tabs)' : '/(tutorial)');
     } catch (error) {
       console.error('게스트 로그인 실패:', error);
       // TODO: 에러 발생 시 사용자에게 보여줄 알림 UI 추가 필요
@@ -74,7 +74,7 @@ export default function LoginScreen() {
       const kakaoToken = await kakaoLogin();
 
       // 2. 카카오 액세스 토큰을 우리 백엔드로 전달, 자체 JWT 발급받기
-      const { accessToken } = await loginWithKakao({
+      const { accessToken, user } = await loginWithKakao({
         accessToken: kakaoToken.accessToken,
         termsVersion: TEMP_TERMS_VERSION,
         agreedAt: new Date().toISOString(),
@@ -84,7 +84,7 @@ export default function LoginScreen() {
         await SecureStore.setItemAsync('authToken', accessToken);
       }
       await fetchUser();
-      router.replace('/(tutorial)');
+      router.replace(user.hasSeenOnboarding ? '/(tabs)' : '/(tutorial)');
     } catch (error) {
       console.error('카카오 로그인 실패:', error);
       // TODO: 에러 발생 시 사용자에게 보여줄 알림 UI 추가 필요
@@ -110,7 +110,7 @@ export default function LoginScreen() {
       }
 
       // 2. identityToken을 우리 백엔드로 전달, 서버에서 Apple 공개키로 검증 후 자체 JWT 발급받기
-      const { accessToken } = await loginWithApple({
+      const { accessToken, user } = await loginWithApple({
         identityToken: credential.identityToken,
         termsVersion: TEMP_TERMS_VERSION,
         agreedAt: new Date().toISOString(),
@@ -120,7 +120,7 @@ export default function LoginScreen() {
         await SecureStore.setItemAsync('authToken', accessToken);
       }
       await fetchUser();
-      router.replace('/(tutorial)');
+      router.replace(user.hasSeenOnboarding ? '/(tabs)' : '/(tutorial)');
     } catch (error: any) {
       if (error?.code === 'ERR_REQUEST_CANCELED') {
         // 사용자가 직접 취소한 경우 - 에러 처리 불필요
@@ -144,11 +144,11 @@ export default function LoginScreen() {
       />
       {/* 배경 그라디언트 레이어 2 (opacity 애니메이션으로 교차) */}
       <AnimatedGradient
-  colors={['#B8DFFF', '#FFFFFF']} // 더 진한 스카이블루 ↔ 흰색
-  start={{ x: 1, y: 0 }}
-  end={{ x: 0, y: 1 }}
-  style={[StyleSheet.absoluteFill, { opacity: gradientOpacity }]}
-/>
+        colors={['#B8DFFF', '#FFFFFF']}
+        start={{ x: 1, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={[StyleSheet.absoluteFill, { opacity: gradientOpacity }]}
+      />
 
       <StatusBar style="dark" />
 

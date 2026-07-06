@@ -10,6 +10,7 @@ export interface LoginResponse {
     nickname: string;
     status: string;
     connectedProviders: string[];
+    hasSeenOnboarding: boolean;
   };
 }
 
@@ -50,4 +51,7 @@ export async function logout(): Promise<void> {
     }
     router.replace('/(auth)/login');
   }
+}
+export async function completeOnboarding(): Promise<void> {
+  await apiClient.post('/api/users/me/onboarding');
 }
