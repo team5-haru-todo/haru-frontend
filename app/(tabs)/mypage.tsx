@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import * as Linking from 'expo-linking';
 import { StatusBar } from 'expo-status-bar';
 
@@ -31,29 +31,31 @@ export default function MyPageScreen() {
   const [pushUpdating, setPushUpdating] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let isMounted = true;
+  // 계정 관리 화면에서 연동/탈퇴 등으로 상태가 바뀐 뒤 이 탭으로 돌아왔을 때도
+  // 최신 정보가 보이도록, 마운트 시가 아니라 탭에 포커스될 때마다 새로고침한다.
+  useFocusEffect(
+    useCallback(() => {
+      let isMounted = true;
 
-    async function fetchData() {
-      try {
-        if (!user) {
+      async function fetchData() {
+        try {
           await fetchUser();
+          const settings = await getMySettings();
+          if (!isMounted) return;
+          setPushEnabled(settings.pushEnabled);
+        } catch (error) {
+          console.error('마이페이지 정보 조회 실패:', error);
+        } finally {
+          if (isMounted) setLoading(false);
         }
-        const settings = await getMySettings();
-        if (!isMounted) return;
-        setPushEnabled(settings.pushEnabled);
-      } catch (error) {
-        console.error('마이페이지 정보 조회 실패:', error);
-      } finally {
-        if (isMounted) setLoading(false);
       }
-    }
 
-    fetchData();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+      fetchData();
+      return () => {
+        isMounted = false;
+      };
+    }, [])
+  );
 
   const handleTogglePush = async () => {
     if (pushUpdating) return;
