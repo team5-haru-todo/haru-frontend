@@ -529,12 +529,12 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    paddingHorizontal: spacing.xl,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    paddingHorizontal: spacing.xl,
     paddingTop: spacing.lg,
     paddingBottom: spacing.lg,
   },
@@ -548,6 +548,10 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     justifyContent: "center",
+    // 카드 그림자(shadowRadius 24)가 ScrollView 프레임 경계에서 잘리지 않도록,
+    // 좌우 여백을 container가 아니라 ScrollView 내부(contentContainerStyle)에 둬서
+    // 클리핑 경계 자체를 화면 전체 폭까지 넓힌다.
+    paddingHorizontal: spacing.xl,
     // 중앙 정렬 기준은 실제 탭바 safe area 포함 높이가 아니라 디자인 기준 tabBarHeight를 사용한다.
     // Android 탭바 자체의 safe area 처리는 app/(tabs)/_layout.tsx에서 별도로 한다.
     paddingBottom: layout.tabBarHeight,

@@ -52,11 +52,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     width: '100%',
   },
-  // SCR-003_3 완료 직후 화면 Figma 기준: height 106, border 없음, paddingVertical 26, shadow 0px 8px 24px #269BFF21
+  // SCR-003_3 완료 직후 화면 전용 — 크기(height/paddingVertical)는 SCR-003_4(default)와 동일하게 맞추고,
+  // border 없음 + shadow 0px 8px 24px #269BFF21 만 이 화면에서 추가로 적용한다.
   cardCelebration: {
-    height: 106,
     borderWidth: 0,
-    paddingVertical: 26,
     shadowColor: '#269BFF',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.13,
