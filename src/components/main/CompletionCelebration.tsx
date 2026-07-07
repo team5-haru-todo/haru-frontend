@@ -71,7 +71,7 @@ export function CompletionCelebration({
             webStyle={{ width: 124, height: 124, transform: "scale(2.234)" }}
           />
 
-          <StreakBadge count={streakCount} />
+          <StreakBadge count={streakCount} showIcon={false} />
         </View>
       </View>
 

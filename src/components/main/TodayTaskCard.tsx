@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
     // alignSelf:'stretch'(부모 폭에 맞춰 늘어남)로 부모 폭을 채운 뒤 marginHorizontal로 좌우 4px씩 줄인다.
     alignSelf: 'stretch',
     marginHorizontal: 4,
-    height: 350,
+    minHeight: 350,
   },
   // Figma "오늘의 한개" 영역 44 hug — 텍스트 lineHeight를 억지로 키우지 않고 wrapper 높이로 확보
   labelBlock: {

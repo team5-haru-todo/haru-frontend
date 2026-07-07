@@ -7,13 +7,13 @@ import { radius, spacing } from "@/src/constants/layout";
 import { typography } from "@/src/constants/typography";
 import { useState } from "react";
 import {
-  Image,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { ChooseFromMemoLink } from "./ChooseFromMemoLink";
 
 type Props = {
   onSubmit: (text: string) => void;
@@ -85,19 +85,7 @@ export function EmptyState({ onSubmit, onChooseFromMemo }: Props) {
         </View>
       </View>
 
-      {/* Figma Link_ChooseFromMemo. 아이콘은 Ic_memo 24x24 에셋이 없어 임시로 list.png 재사용 — TODO: 실제 에셋 교체 */}
-      <TouchableOpacity
-        style={styles.chooseFromMemoLink}
-        onPress={onChooseFromMemo}
-        activeOpacity={0.7}
-      >
-        <Image
-          source={require("../../../assets/images/list.png")}
-          style={styles.chooseFromMemoIcon}
-          resizeMode="contain"
-        />
-        <Text style={styles.chooseFromMemoLabel}>메모장에서 고르기</Text>
-      </TouchableOpacity>
+      <ChooseFromMemoLink onPress={onChooseFromMemo} />
     </View>
   );
 }
@@ -180,21 +168,5 @@ const styles = StyleSheet.create({
   },
   buttonTextDisabled: {
     color: colors.text.tertiary,
-  },
-  chooseFromMemoLink: {
-    width: 154,
-    height: 24,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  chooseFromMemoIcon: {
-    width: 24,
-    height: 24,
-    tintColor: colors.primary.default,
-  },
-  chooseFromMemoLabel: {
-    ...typography.b2BodyMedium,
-    color: colors.primary.default,
   },
 });

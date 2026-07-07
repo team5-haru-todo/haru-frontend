@@ -5,16 +5,19 @@ import { spacing, radius } from '@/src/constants/layout';
 
 type Props = {
   count: number;
+  showIcon?: boolean;
 };
 
-export function StreakBadge({ count }: Props) {
+export function StreakBadge({ count, showIcon = true }: Props) {
   return (
-    <View style={styles.badge}>
-      <Image
-        source={require('../../../assets/images/Check.png')}
-        style={styles.checkIcon}
-        resizeMode="contain"
-      />
+    <View style={[styles.badge, !showIcon && styles.badgeNoIcon]}>
+      {showIcon && (
+        <Image
+          source={require('../../../assets/images/Check.png')}
+          style={styles.checkIcon}
+          resizeMode="contain"
+        />
+      )}
       <Text style={styles.text}>
         <Text style={styles.count}>{count}일</Text>
         <Text style={styles.label}> 연속 달성</Text>
@@ -35,6 +38,9 @@ const styles = StyleSheet.create({
     paddingLeft: spacing.sm,
     paddingRight: spacing.md,
     borderRadius: radius.pill,
+  },
+  badgeNoIcon: {
+    paddingLeft: spacing.md,
   },
   checkIcon: {
     width: 24,
