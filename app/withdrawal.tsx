@@ -178,7 +178,6 @@ export default function WithdrawalScreen() {
       ) : (
         <>
           <View style={styles.completeContentArea}>
-            <View style={styles.completeImagePlaceholder} />
             <View style={styles.centerContent}>
               <Text style={styles.completeTitle}>탈퇴가 완료되었습니다</Text>
               <View>
@@ -358,12 +357,7 @@ const styles = StyleSheet.create({
     padding: 10,
     width: '100%',
   },
-  completeImagePlaceholder: {
-    width: 120,
-    height: 120,
-    borderRadius: 30,
-    backgroundColor: '#D9D9D9',
-  },
+
   centerContent: {
     flexDirection: 'column',
     alignItems: 'center',

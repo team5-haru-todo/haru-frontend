@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -8,6 +8,7 @@ import TutorialPage2 from '@/components/tutorial/TutorialPage2';
 import { HomeIndicatorSpacer } from '@/src/components/common/HomeIndicatorSpacer';
 import { colors, spacing, typography } from '@/src/constants';
 import { completeOnboarding } from '@/src/api/auth';
+import { logEvent } from '@/src/lib/analytics';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const TOTAL_PAGES = 2;
@@ -17,7 +18,14 @@ export default function TutorialScreen() {
   const [activeIndex, setActiveIndex] = useState(0);
   const statusBarHeight = Math.max(insets.top, 54);
 
-  const handleFinish = async () => {
+  useEffect(() => {
+    logEvent('onboarding_started');
+  }, []);
+
+  const handleFinish = async (completionType: 'finished' | 'skipped') => {
+    logEvent(completionType === 'skipped' ? 'onboarding_skipped' : 'onboarding_completed', {
+      last_page_index: activeIndex,
+    });
     try {
       await completeOnboarding();
     } catch (error) {
@@ -31,12 +39,12 @@ export default function TutorialScreen() {
     if (activeIndex < TOTAL_PAGES - 1) {
       setActiveIndex((prev) => prev + 1);
     } else {
-      handleFinish();
+      handleFinish('finished');
     }
   };
 
   const handleSkip = () => {
-    handleFinish();
+    handleFinish('skipped');
   };
 
   const content = (
