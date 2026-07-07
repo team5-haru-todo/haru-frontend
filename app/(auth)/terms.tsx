@@ -7,7 +7,7 @@ import { useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { HomeIndicatorSpacer } from '../../src/components/common/HomeIndicatorSpacer';
 import { useTerms } from '../../src/context/TermsContext';
-import { loginWithApple, loginWithKakao } from '@/src/api/auth';
+import { linkApple, linkKakao, loginWithApple, loginWithKakao } from '@/src/api/auth';
 import { useUserStore } from '@/src/store/userStore';
 
 const ICON_ARROW_LEFT = require('../../assets/images/Icon/Arrow_left.png');
@@ -33,18 +33,39 @@ export default function TermsScreen() {
   const fetchUser = useUserStore((state) => state.fetchUser);
   const [submitting, setSubmitting] = useState(false);
 
-  // login.tsx에서 신규 유저로 판별되어 이 화면으로 넘어올 때 함께 전달된 소셜 토큰
-  const { provider, kakaoAccessToken, appleIdentityToken } = useLocalSearchParams<{
+  // login.tsx(신규 가입) 또는 account-management.tsx(게스트 계정 연동)에서
+  // 이 화면으로 넘어올 때 함께 전달된 정보. mode로 두 경로를 구분한다.
+  const { provider, kakaoAccessToken, appleIdentityToken, mode } = useLocalSearchParams<{
     provider?: string;
     kakaoAccessToken?: string;
     appleIdentityToken?: string;
+    mode?: string;
   }>();
+
+  const isLinkMode = mode === 'link';
 
   const handleAgree = async () => {
     if (submitting) return;
     setSubmitting(true);
     try {
       const agreedAt = new Date().toISOString();
+
+      if (isLinkMode) {
+        // 게스트 계정에 소셜 계정 연동
+        if (provider === 'kakao' && kakaoAccessToken) {
+          await linkKakao({ accessToken: kakaoAccessToken, termsVersion: TERMS_VERSION, agreedAt });
+        } else if (provider === 'apple' && appleIdentityToken) {
+          await linkApple({ identityToken: appleIdentityToken, termsVersion: TERMS_VERSION, agreedAt });
+        } else {
+          console.error('약관 동의 처리 실패: 연동 토큰 정보가 없습니다.');
+          return;
+        }
+        await fetchUser();
+        router.replace('/account-management');
+        return;
+      }
+
+      // 신규 가입 (로그인 화면에서 온 경우)
       let accessToken: string;
       let user;
 
@@ -73,10 +94,9 @@ export default function TermsScreen() {
         await SecureStore.setItemAsync('authToken', accessToken);
       }
       await fetchUser();
-      // 이 화면은 신규 유저만 오는 경로라 hasSeenOnboarding은 항상 false지만, 방어적으로 그대로 분기
       router.replace(user.hasSeenOnboarding ? '/(tabs)' : '/(tutorial)');
     } catch (error) {
-      console.error('약관 동의 후 가입 처리 실패:', error);
+      console.error('약관 동의 처리 실패:', error);
       // TODO: 에러 발생 시 사용자에게 보여줄 알림 UI 추가 필요
     } finally {
       setSubmitting(false);
