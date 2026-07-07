@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { useRef } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 
@@ -43,7 +44,18 @@ export function MemoCard({
   onChallenge,
   onLongPress,
 }: MemoCardProps) {
+  const swipeableRef = useRef<Swipeable>(null);
   const isChallengeDisabled = memo.completedToday;
+
+  const handleTogglePinPress = () => {
+    swipeableRef.current?.reset();
+    onTogglePin(memo);
+  };
+
+  const handleRequestDeletePress = () => {
+    swipeableRef.current?.reset();
+    onRequestDelete(memo.id);
+  };
 
   if (isEditing) {
     return (
@@ -61,22 +73,26 @@ export function MemoCard({
   }
   return (
     <Swipeable
+      ref={swipeableRef}
       overshootRight={false}
       renderRightActions={() => (
         <View style={styles.swipeActions}>
-          <Pressable style={styles.pinButton} onPress={() => onTogglePin(memo)}>
+          <Pressable style={styles.pinButton} onPress={handleTogglePinPress}>
             <Image
               source={memo.taskType === 'RECURRING' ? pinFilledIcon : pinIcon}
               style={styles.actionIcon}
               contentFit="contain"
             />
           </Pressable>
-          <Pressable style={styles.deleteButton} onPress={() => onRequestDelete(memo.id)}>
+          <Pressable style={styles.deleteButton} onPress={handleRequestDeletePress}>
             <Image source={trashIcon} style={styles.actionIcon} contentFit="contain" />
           </Pressable>
         </View>
       )}>
-      <Pressable style={styles.memoCard} onPress={() => onStartEdit(memo)} onLongPress={onLongPress}>
+      <Pressable
+        style={styles.memoCard}
+        onPress={isChallengeDisabled ? undefined : () => onStartEdit(memo)}
+        onLongPress={onLongPress}>
         <View style={styles.memoCardContent}>
           <Text style={styles.memoCardTitle}>{memo.content}</Text>
           <Text style={styles.memoCardTime}>{formatRelativeDays(memo.createdAt)}</Text>

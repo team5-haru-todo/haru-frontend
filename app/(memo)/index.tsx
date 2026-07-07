@@ -1,7 +1,17 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { useRef, useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  AppState,
+  Platform,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import ReorderableList, {
   useReorderableDrag,
   type ReorderableListReorderEvent,
@@ -21,6 +31,11 @@ type MemoListItem =
   | { type: 'header'; key: string; title: string; section: TaskResponse['taskType']; spaced: boolean }
   | { type: 'input'; key: string }
   | { type: 'memo'; key: string; memo: TaskResponse };
+
+// 자정 롤오버 판단용 — KST 기준 YYYY-MM-DD (디바이스 로케일과 무관하게 KST 자정을 경계로).
+function getKstDateKey(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date());
+}
 
 const ADD_BUTTON_HEIGHT = 54;
 const ADD_BUTTON_VERTICAL_GAP = spacing.lg;
@@ -54,14 +69,63 @@ export default function MemoListScreen() {
   const bottomInset =
     Platform.OS === 'android' ? Math.max(insets.bottom, ANDROID_MIN_BOTTOM_INSET) : insets.bottom;
   const listBottomPadding = ADD_BUTTON_HEIGHT + ADD_BUTTON_VERTICAL_GAP + bottomInset + LIST_BOTTOM_GAP;
-  const { memos, loading, error, addMemo, editMemo, removeMemo, toggleMemoRecurring, reorderMemos } =
-    useMemos();
+  const {
+    memos,
+    loading,
+    error,
+    addMemo,
+    editMemo,
+    removeMemo,
+    toggleMemoRecurring,
+    reorderMemos,
+    refreshMemos,
+  } = useMemos();
   const [isAdding, setIsAdding] = useState(false);
   const [memoText, setMemoText] = useState('');
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editText, setEditText] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+  const memoSubmittingRef = useRef(false);
   const editSubmittingRef = useRef(false);
+  // 마지막으로 목록을 조회한 KST 날짜와, 직전 AppState (자정 롤오버 감지용)
+  const lastSyncedDateRef = useRef(getKstDateKey());
+  const previousAppStateRef = useRef(AppState.currentState);
+
+  // 당겨서 새로고침 — 완료(completedToday) 상태 등 최신 서버 값 반영. 전체화면 스피너 없이 조용히.
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const refreshed = await refreshMemos({ silent: true });
+      if (refreshed) {
+        lastSyncedDateRef.current = getKstDateKey();
+      }
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshMemos]);
+
+  // 앱이 background/inactive에서 active로 복귀했을 때, 그 사이 KST 날짜가 바뀌었으면(자정 넘김)
+  // 반복 할 일의 completedToday가 서버 기준으로 풀린 상태를 반영하기 위해 조용히 재조회한다.
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      const cameFromBackground = /inactive|background/.test(previousAppStateRef.current);
+      if (cameFromBackground && nextAppState === 'active') {
+        const currentDateKey = getKstDateKey();
+        if (lastSyncedDateRef.current !== currentDateKey) {
+          refreshMemos({ silent: true }).then((refreshed) => {
+            if (refreshed) {
+              lastSyncedDateRef.current = currentDateKey;
+            }
+          });
+        }
+      }
+      previousAppStateRef.current = nextAppState;
+    });
+    return () => {
+      subscription.remove();
+    };
+  }, [refreshMemos]);
 
   // 도전 = 이 할 일을 오늘의 한 개로 설정 (record 도메인) → 성공 시 전역 토스트
   const handleChallenge = async (memo: TaskResponse) => {
@@ -79,6 +143,10 @@ export default function MemoListScreen() {
   };
 
   const handleSubmitMemo = async () => {
+    if (memoSubmittingRef.current) {
+      return;
+    }
+
     const content = memoText.trim();
     if (content.length === 0) {
       setMemoText('');
@@ -86,10 +154,15 @@ export default function MemoListScreen() {
       return;
     }
 
-    const success = await addMemo(content);
-    if (success) {
-      setMemoText('');
-      setIsAdding(false);
+    memoSubmittingRef.current = true;
+    try {
+      const success = await addMemo(content);
+      if (success) {
+        setMemoText('');
+        setIsAdding(false);
+      }
+    } finally {
+      memoSubmittingRef.current = false;
     }
   };
 
@@ -143,6 +216,7 @@ export default function MemoListScreen() {
       value={memoText}
       onChangeText={setMemoText}
       onSubmitEditing={handleSubmitMemo}
+      onBlur={handleSubmitMemo}
       returnKeyType="done"
       placeholder="할 일을 적어보세요"
       placeholderTextColor={colors.text.placeholder}
@@ -160,6 +234,13 @@ export default function MemoListScreen() {
     onRequestDelete: setPendingDeleteId,
     onChallenge: handleChallenge,
   };
+  const refreshControl = (
+    <RefreshControl
+      refreshing={refreshing}
+      onRefresh={handleRefresh}
+      tintColor={colors.primary.default}
+    />
+  );
 
   // 즐겨찾기 라벨은 ListHeaderComponent(고정)로 빼고 카드만 data에 둔다.
   // 중간 '전체' 라벨만 셀로 남긴다 (섹션 경계 표시용).
@@ -261,6 +342,7 @@ export default function MemoListScreen() {
             style={styles.scroll}
             contentContainerStyle={[styles.listContent, { paddingBottom: listBottomPadding }]}
             showsVerticalScrollIndicator={false}
+            refreshControl={refreshControl}
             ListHeaderComponent={
               <>
                 {error && <Text style={styles.errorText}>요청을 처리하지 못했어요</Text>}

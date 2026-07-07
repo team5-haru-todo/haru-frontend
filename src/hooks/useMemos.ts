@@ -26,17 +26,24 @@ export function useMemos() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadMemos = useCallback(async () => {
-    setLoading(true);
+  // silent: 전체화면 로딩 스피너를 띄우지 않고 조용히 재조회 (pull-to-refresh, 포그라운드 복귀용)
+  const loadMemos = useCallback(async (options?: { silent?: boolean }) => {
+    if (!options?.silent) {
+      setLoading(true);
+    }
     setError(null);
     try {
       const tasks = await getTasks();
       setMemos(sortTasks(tasks));
+      return true;
     } catch (loadError) {
       console.error('메모 목록 조회 실패:', loadError);
       setError(getErrorMessage(loadError));
+      return false;
     } finally {
-      setLoading(false);
+      if (!options?.silent) {
+        setLoading(false);
+      }
     }
   }, []);
 

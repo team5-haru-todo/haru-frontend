@@ -50,17 +50,24 @@ export default function MemoPreviewSheet({ visible, onClose, onSelect }: Props) 
     onSelect(memo);
   };
 
-  const renderCard = (memo: TaskResponse) => (
-    <Pressable key={memo.id} style={styles.memoCard} onPress={() => handleChallenge(memo)}>
-      <View style={styles.memoCardContent}>
-        <Text style={styles.memoCardTitle}>{memo.content}</Text>
-        <Text style={styles.memoCardTime}>{formatRelativeDays(memo.createdAt)}</Text>
-      </View>
-      <View style={styles.challengeButton}>
-        <Text style={styles.challengeButtonLabel}>도전</Text>
-      </View>
-    </Pressable>
-  );
+  const renderCard = (memo: TaskResponse) => {
+    const isDone = memo.completedToday;
+    return (
+      <Pressable
+        key={memo.id}
+        style={styles.memoCard}
+        onPress={isDone ? undefined : () => handleChallenge(memo)}
+        disabled={isDone}>
+        <View style={styles.memoCardContent}>
+          <Text style={styles.memoCardTitle}>{memo.content}</Text>
+          <Text style={styles.memoCardTime}>{formatRelativeDays(memo.createdAt)}</Text>
+        </View>
+        <View style={[styles.challengeButton, isDone && styles.challengeButtonDisabled]}>
+          <Text style={styles.challengeButtonLabel}>도전</Text>
+        </View>
+      </Pressable>
+    );
+  };
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
@@ -205,6 +212,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary.light,
     paddingHorizontal: 12,
     paddingVertical: 6,
+  },
+  challengeButtonDisabled: {
+    opacity: 0.5,
   },
   challengeButtonLabel: {
     ...typography.b4BodySm,
