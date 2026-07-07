@@ -105,10 +105,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   input: {
-    ...typography.b3BodyRegular,
+    // lineHeight를 명시하면 iOS에서 캐럿(커서)은 fontSize(16) 기준으로 그려지는데
+    // 실제 글자는 lineHeight(24) 기준 줄 안에서 배치돼 서로 어긋나 텍스트가 커서보다
+    // 아래로 처져 보인다 — lineHeight는 빼고 폰트의 자연스러운 줄 높이를 쓰게 하고,
+    // 기존과 동일한 세로 공간을 유지하도록 height만 명시한다.
+    fontFamily: typography.b3BodyRegular.fontFamily,
+    fontSize: typography.b3BodyRegular.fontSize,
+    letterSpacing: typography.b3BodyRegular.letterSpacing,
     color: colors.text.primary,
     textAlign: 'center',
     width: '100%',
+    height: 24,
     padding: 0,
   },
   hint: {
