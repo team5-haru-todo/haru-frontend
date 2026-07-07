@@ -297,15 +297,19 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingLeft: 32,
     paddingRight: 16,
-    paddingVertical: 10,
+    // 기존 높이(lineHeight 24 + 상하 패딩 10)를 고정 높이로 유지하고 세로 중앙 정렬한다.
+    height: 44,
+    justifyContent: 'center',
     width: '100%',
   },
   inputText: {
     fontSize: 16,
     fontFamily: 'Pretendard-Regular',
     color: colors.text.primary,
-    lineHeight: 24,
     padding: 0,
+    // iOS는 fontSize보다 큰 lineHeight를 주면 글자가 아래로 밀려 보여서 lineHeight를 두지 않는다.
+    textAlignVertical: 'center', // Android 전용: 텍스트 세로 중앙
+    includeFontPadding: false, // Android 전용: 폰트 여분 패딩 제거
   },
 
   // Btn_Buttons: px12 gap12, width=350(contentWidth), self-centered
