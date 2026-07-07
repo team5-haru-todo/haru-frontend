@@ -8,18 +8,22 @@ import * as SecureStore from 'expo-secure-store';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { login as kakaoLogin } from '@react-native-seoul/kakao-login';
 import { LinearGradient } from 'expo-linear-gradient';
-import { loginAsGuest, loginWithApple, loginWithKakao } from '@/src/api/auth';
+import {
+  loginAsGuest,
+  loginWithApple,
+  loginWithKakao,
+  checkKakaoUser,
+  checkAppleUser,
+} from '@/src/api/auth';
 import { useUserStore } from '@/src/store/userStore';
 import { HomeIndicatorSpacer } from '@/src/components/common/HomeIndicatorSpacer';
+import { logEvent } from '@/src/lib/analytics';
 
 const AnimatedGradient = Animated.createAnimatedComponent(LinearGradient);
 
 const KAKAO_ICON = require('../../assets/images/Icon/KaKao.png');
 const APPLE_ICON = require('../../assets/images/Icon/Apple.png');
 const LOGO_ICON = require('../../assets/images/logo.png');
-
-// TODO: 약관 화면(terms.tsx) 정식 연동 전까지 임시 고정값 사용
-const TEMP_TERMS_VERSION = 'v1.0';
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
@@ -51,13 +55,14 @@ export default function LoginScreen() {
   const handleGuestLogin = async () => {
     if (loading) return;
     setLoading(true);
+    logEvent('login_method_selected', { method: 'guest' });
     try {
-      const { accessToken } = await loginAsGuest();
+      const { accessToken, user } = await loginAsGuest();
       if (Platform.OS !== 'web') {
         await SecureStore.setItemAsync('authToken', accessToken);
       }
       await fetchUser();
-      router.replace('/(tutorial)');
+      router.replace(user.hasSeenOnboarding ? '/(tabs)' : '/(tutorial)');
     } catch (error) {
       console.error('게스트 로그인 실패:', error);
       // TODO: 에러 발생 시 사용자에게 보여줄 알림 UI 추가 필요
@@ -69,14 +74,27 @@ export default function LoginScreen() {
   const handleKakaoLogin = async () => {
     if (loading) return;
     setLoading(true);
+    logEvent('login_method_selected', { method: 'kakao' });
     try {
       // 1. 카카오 네이티브 SDK로 카카오 자체 로그인 (기기의 카카오톡 앱 또는 웹뷰)
       const kakaoToken = await kakaoLogin();
 
-      // 2. 카카오 액세스 토큰을 우리 백엔드로 전달, 자체 JWT 발급받기
-      const { accessToken } = await loginWithKakao({
+      // 2. 신규 유저인지 먼저 확인 (DB에 아직 아무것도 저장 안 됨)
+      const { isNewUser } = await checkKakaoUser(kakaoToken.accessToken);
+
+      if (isNewUser) {
+        // 신규 유저 — 약관 동의 화면으로 이동, 실제 가입은 거기서 동의 완료 시 처리
+        router.push({
+          pathname: '/(auth)/terms',
+          params: { provider: 'kakao', kakaoAccessToken: kakaoToken.accessToken },
+        });
+        return;
+      }
+
+      // 3. 기존 유저 — 바로 로그인 처리 (termsVersion은 최초 가입 때 이미 저장되어 있으므로 서버에서 무시됨)
+      const { accessToken, user } = await loginWithKakao({
         accessToken: kakaoToken.accessToken,
-        termsVersion: TEMP_TERMS_VERSION,
+        termsVersion: '',
         agreedAt: new Date().toISOString(),
       });
 
@@ -84,7 +102,7 @@ export default function LoginScreen() {
         await SecureStore.setItemAsync('authToken', accessToken);
       }
       await fetchUser();
-      router.replace('/(tutorial)');
+      router.replace(user.hasSeenOnboarding ? '/(tabs)' : '/(tutorial)');
     } catch (error) {
       console.error('카카오 로그인 실패:', error);
       // TODO: 에러 발생 시 사용자에게 보여줄 알림 UI 추가 필요
@@ -96,6 +114,7 @@ export default function LoginScreen() {
   const handleAppleLogin = async () => {
     if (loading) return;
     setLoading(true);
+    logEvent('login_method_selected', { method: 'apple' });
     try {
       // 1. Apple 네이티브 로그인 UI로 로그인, identityToken(JWT) 받기
       const credential = await AppleAuthentication.signInAsync({
@@ -109,10 +128,21 @@ export default function LoginScreen() {
         throw new Error('Apple identityToken을 받지 못했습니다.');
       }
 
-      // 2. identityToken을 우리 백엔드로 전달, 서버에서 Apple 공개키로 검증 후 자체 JWT 발급받기
-      const { accessToken } = await loginWithApple({
+      // 2. 신규 유저인지 먼저 확인
+      const { isNewUser } = await checkAppleUser(credential.identityToken);
+
+      if (isNewUser) {
+        router.push({
+          pathname: '/(auth)/terms',
+          params: { provider: 'apple', appleIdentityToken: credential.identityToken },
+        });
+        return;
+      }
+
+      // 3. 기존 유저 — 바로 로그인 처리
+      const { accessToken, user } = await loginWithApple({
         identityToken: credential.identityToken,
-        termsVersion: TEMP_TERMS_VERSION,
+        termsVersion: '',
         agreedAt: new Date().toISOString(),
       });
 
@@ -120,7 +150,7 @@ export default function LoginScreen() {
         await SecureStore.setItemAsync('authToken', accessToken);
       }
       await fetchUser();
-      router.replace('/(tutorial)');
+      router.replace(user.hasSeenOnboarding ? '/(tabs)' : '/(tutorial)');
     } catch (error: any) {
       if (error?.code === 'ERR_REQUEST_CANCELED') {
         // 사용자가 직접 취소한 경우 - 에러 처리 불필요
@@ -144,11 +174,11 @@ export default function LoginScreen() {
       />
       {/* 배경 그라디언트 레이어 2 (opacity 애니메이션으로 교차) */}
       <AnimatedGradient
-  colors={['#B8DFFF', '#FFFFFF']} // 더 진한 스카이블루 ↔ 흰색
-  start={{ x: 1, y: 0 }}
-  end={{ x: 0, y: 1 }}
-  style={[StyleSheet.absoluteFill, { opacity: gradientOpacity }]}
-/>
+        colors={['#B8DFFF', '#FFFFFF']}
+        start={{ x: 1, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={[StyleSheet.absoluteFill, { opacity: gradientOpacity }]}
+      />
 
       <StatusBar style="dark" />
 

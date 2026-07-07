@@ -10,6 +10,7 @@ export interface LoginResponse {
     nickname: string;
     status: string;
     connectedProviders: string[];
+    hasSeenOnboarding: boolean;
   };
 }
 
@@ -25,8 +26,28 @@ export interface AppleLoginRequest {
   agreedAt: string;
 }
 
+export interface SocialUserCheckResponse {
+  isNewUser: boolean;
+}
+
 export async function loginAsGuest(): Promise<LoginResponse> {
   const response = await apiClient.post('/api/auth/guest');
+  return response.data.data;
+}
+
+// 카카오 SDK 로그인 직후, 실제 가입 처리 전에 신규 유저인지 확인한다 (DB 저장 없음).
+export async function checkKakaoUser(accessToken: string): Promise<SocialUserCheckResponse> {
+  const response = await apiClient.post('/api/auth/kakao/check', null, {
+    params: { accessToken },
+  });
+  return response.data.data;
+}
+
+// Apple SDK 로그인 직후, 실제 가입 처리 전에 신규 유저인지 확인한다 (DB 저장 없음).
+export async function checkAppleUser(identityToken: string): Promise<SocialUserCheckResponse> {
+  const response = await apiClient.post('/api/auth/apple/check', null, {
+    params: { identityToken },
+  });
   return response.data.data;
 }
 
@@ -40,6 +61,16 @@ export async function loginWithApple(request: AppleLoginRequest): Promise<LoginR
   return response.data.data;
 }
 
+export async function linkKakao(request: KakaoLoginRequest): Promise<LoginResponse> {
+  const response = await apiClient.post('/api/auth/kakao/link', request);
+  return response.data.data;
+}
+
+export async function linkApple(request: AppleLoginRequest): Promise<LoginResponse> {
+  const response = await apiClient.post('/api/auth/apple/link', request);
+  return response.data.data;
+}
+
 export async function logout(): Promise<void> {
   try {
     await apiClient.post('/api/auth/logout');
@@ -50,4 +81,8 @@ export async function logout(): Promise<void> {
     }
     router.replace('/(auth)/login');
   }
+}
+
+export async function completeOnboarding(): Promise<void> {
+  await apiClient.post('/api/users/me/onboarding');
 }

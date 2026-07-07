@@ -58,13 +58,17 @@ export function CompletionCelebration({
         <Text style={styles.title}>오늘 한 개 완료!</Text>
 
         <View style={styles.resultCard}>
-          {/* Check_JSON: 124×124px, 화면 진입 즉시 재생 (zIndex 1) */}
+          {/* Check_JSON: check.json 캔버스(1920x1920) 안에서 실제 체크 배지는 지름 약 693px짜리
+              원이라 재생 박스를 그대로 124px로 두면 배지가 124*693/1920≈45px로 작게 나온다.
+              레이아웃(박스가 차지하는 공간)은 기존 124x124 그대로 유지하고, transform: scale로
+              그려지는 크기만 키워서 아래 형제 요소(StreakBadge 등) 위치는 그대로 둔다.
+              배지가 ~100px로 보이도록 스케일 = 100 / (124 * 693/1920) ≈ 2.234 */}
           <LottieView
             source={require("../../../assets/animations/check.json")}
             autoPlay={true}
             loop={false}
             style={styles.checkLottie}
-            webStyle={{ width: 124, height: 124 }}
+            webStyle={{ width: 124, height: 124, transform: "scale(2.234)" }}
           />
 
           <StreakBadge count={streakCount} />
@@ -146,6 +150,7 @@ const styles = StyleSheet.create({
     width: 124,
     height: 124,
     zIndex: 1,
+    transform: [{ scale: 2.234 }],
   },
   weekStripSection: {
     alignItems: "center",

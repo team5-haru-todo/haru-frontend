@@ -1,45 +1,55 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
 import TutorialPage1 from '@/components/tutorial/TutorialPage1';
 import TutorialPage2 from '@/components/tutorial/TutorialPage2';
 import { HomeIndicatorSpacer } from '@/src/components/common/HomeIndicatorSpacer';
 import { colors, spacing, typography } from '@/src/constants';
+import { completeOnboarding } from '@/src/api/auth';
+import { logEvent } from '@/src/lib/analytics';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
 const TOTAL_PAGES = 2;
 
 export default function TutorialScreen() {
   const insets = useSafeAreaInsets();
   const [activeIndex, setActiveIndex] = useState(0);
+  const statusBarHeight = Math.max(insets.top, 54);
 
-  const isLastPage = activeIndex === TOTAL_PAGES - 1;
+  useEffect(() => {
+    logEvent('onboarding_started');
+  }, []);
 
-  const handleFinish = () => {
+  const handleFinish = async (completionType: 'finished' | 'skipped') => {
+    logEvent(completionType === 'skipped' ? 'onboarding_skipped' : 'onboarding_completed', {
+      last_page_index: activeIndex,
+    });
+    try {
+      await completeOnboarding();
+    } catch (error) {
+      console.error('온보딩 완료 처리 실패:', error);
+      // 실패해도 사용자 흐름은 막지 않음 (다음 로그인 때 다시 온보딩 뜰 수 있음)
+    }
     router.replace('/(tabs)');
   };
 
   const handleNext = () => {
     if (activeIndex < TOTAL_PAGES - 1) {
       setActiveIndex((prev) => prev + 1);
-      return;
+    } else {
+      handleFinish('finished');
     }
-
-    handleFinish();
   };
 
-  return (
-    <LinearGradient
-      colors={['#FFFFFF', colors.primary.light]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 0.96 }}
-      style={styles.contentArea}
-    >
-      <View style={{ height: Math.max(insets.top, 54) }} />
+  const handleSkip = () => {
+    handleFinish('skipped');
+  };
+
+  const content = (
+    <>
+      <View style={{ height: statusBarHeight }} />
 
       <View style={styles.pageArea}>
         {activeIndex === 0 && <TutorialPage1 isActive={activeIndex === 0} />}
@@ -57,46 +67,54 @@ export default function TutorialScreen() {
       <View style={styles.btnWrapper}>
         <TouchableOpacity style={styles.btnNext} activeOpacity={0.8} onPress={handleNext}>
           <Text style={styles.btnNextText}>
-            {isLastPage ? '오늘 한개 시작해 볼까요?' : '다음'}
+            {activeIndex === TOTAL_PAGES - 1 ? '시작하기' : '다음'}
           </Text>
+        </TouchableOpacity>
+
+        {/* 건너뛰기 - 게스트 로그인 버튼과 동일한 패턴 */}
+        <TouchableOpacity style={styles.skipButton} activeOpacity={0.7} onPress={handleSkip}>
+          <Text style={styles.skipText}>건너뛰기</Text>
         </TouchableOpacity>
       </View>
 
       <HomeIndicatorSpacer />
-    </LinearGradient>
+    </>
   );
+
+  if (activeIndex === 0) {
+    return (
+      <LinearGradient
+        colors={['#FFFFFF', colors.primary.light]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0.96 }}
+        style={styles.contentArea}
+      >
+        {content}
+      </LinearGradient>
+    );
+  }
+
+  return <View style={[styles.contentArea, { backgroundColor: '#FFFFFF' }]}>{content}</View>;
 }
 
 const styles = StyleSheet.create({
-  contentArea: {
-    flex: 1,
-  },
-
-  pageArea: {
-    flex: 1,
-    width: SCREEN_WIDTH,
-  },
+  contentArea: { flex: 1 },
+  pageArea: { flex: 1, width: SCREEN_WIDTH },
 
   bottomArea: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 8,
-    paddingBottom: 16,
+    paddingTop: 12,
+    paddingBottom: 20,
     paddingHorizontal: spacing.xl,
   },
-
-  dots: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-
+  dots: { flexDirection: 'row', gap: 6 },
   dot: {
     width: 8,
     height: 8,
     borderRadius: 4,
     backgroundColor: colors.border.default,
   },
-
   dotActive: {
     width: 20,
     backgroundColor: colors.primary.default,
@@ -106,9 +124,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xl,
     paddingTop: spacing.md,
+    alignItems: 'center',
+    gap: spacing.md,
   },
-
   btnNext: {
+    width: '100%',
     height: 52,
     alignItems: 'center',
     justifyContent: 'center',
@@ -116,9 +136,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary.default,
     overflow: 'hidden',
   },
+  btnNextText: { ...typography.b2BodyBold, color: '#FFFFFF' },
 
-  btnNextText: {
-    ...typography.b2BodyBold,
-    color: '#FFFFFF',
+  skipButton: {
+    padding: 8,
+  },
+  skipText: {
+    ...typography.b4BodySm,
+    color: colors.text.tertiary,
+    textDecorationLine: 'underline',
   },
 });

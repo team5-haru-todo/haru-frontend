@@ -10,6 +10,8 @@ import {
   View,
 } from "react-native";
 
+const APP_ICON = require("../../../assets/images/app-icon.png");
+
 type Props = {
   visible: boolean;
   onSkip: () => void;
@@ -57,7 +59,7 @@ export function NotificationPermissionModal({
 
           {/* 알림 예시 카드 */}
           <View style={styles.previewCard}>
-            <View style={styles.appIcon} />
+            <Image source={APP_ICON} style={styles.appIcon} resizeMode="cover" />
             <View style={styles.previewText}>
               <View style={styles.previewHeader}>
                 <Text style={styles.appName}>하루한개</Text>
@@ -169,8 +171,8 @@ const styles = StyleSheet.create({
   appIcon: {
     width: 40,
     height: 40,
-    backgroundColor: "#a7a7a7",
     borderRadius: 8,
+    overflow: "hidden",
     flexShrink: 0,
   },
   previewText: {
@@ -226,3 +228,4 @@ const styles = StyleSheet.create({
     color: colors.surface.default,
   },
 });
+

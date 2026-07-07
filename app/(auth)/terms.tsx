@@ -1,10 +1,14 @@
 import { colors, spacing, typography } from '@/src/constants';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useState } from 'react';
+import * as SecureStore from 'expo-secure-store';
 import { HomeIndicatorSpacer } from '../../src/components/common/HomeIndicatorSpacer';
 import { useTerms } from '../../src/context/TermsContext';
+import { linkApple, linkKakao, loginWithApple, loginWithKakao } from '@/src/api/auth';
+import { useUserStore } from '@/src/store/userStore';
 
 const ICON_ARROW_LEFT = require('../../assets/images/Icon/Arrow_left.png');
 const ICON_CHECKBOX_ON = require('../../assets/images/Icon/Ic_Check.png');
@@ -12,6 +16,9 @@ const ICON_CHECKBOX_OFF = require('../../assets/images/Icon/Ic_Check_off.png');
 const ICON_CHECK_LINE_ON = require('../../assets/images/Icon/Ic_check_line_on.png');
 const ICON_CHECK_LINE_OFF = require('../../assets/images/Icon/Ic_check_line_off.png');
 const ICON_ARROW_RIGHT = require('../../assets/images/Icon/Arrow_Right_xs.png');
+
+// TODO: 약관 버전 관리 정책(서버/노션 등) 확정 전까지 임시 고정값 사용
+const TERMS_VERSION = 'v1.0';
 
 const TERMS: { id: number; key: 'service' | 'privacy' | 'marketing'; label: string; route: string }[] = [
   { id: 1, key: 'service', label: '(필수) 서비스 이용약관', route: '/terms/service' },
@@ -23,6 +30,78 @@ export default function TermsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { agreed, allChecked, requiredChecked, toggleAll } = useTerms();
+  const fetchUser = useUserStore((state) => state.fetchUser);
+  const [submitting, setSubmitting] = useState(false);
+
+  // login.tsx(신규 가입) 또는 account-management.tsx(게스트 계정 연동)에서
+  // 이 화면으로 넘어올 때 함께 전달된 정보. mode로 두 경로를 구분한다.
+  const { provider, kakaoAccessToken, appleIdentityToken, mode } = useLocalSearchParams<{
+    provider?: string;
+    kakaoAccessToken?: string;
+    appleIdentityToken?: string;
+    mode?: string;
+  }>();
+
+  const isLinkMode = mode === 'link';
+
+  const handleAgree = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const agreedAt = new Date().toISOString();
+
+      if (isLinkMode) {
+        // 게스트 계정에 소셜 계정 연동
+        if (provider === 'kakao' && kakaoAccessToken) {
+          await linkKakao({ accessToken: kakaoAccessToken, termsVersion: TERMS_VERSION, agreedAt });
+        } else if (provider === 'apple' && appleIdentityToken) {
+          await linkApple({ identityToken: appleIdentityToken, termsVersion: TERMS_VERSION, agreedAt });
+        } else {
+          console.error('약관 동의 처리 실패: 연동 토큰 정보가 없습니다.');
+          return;
+        }
+        await fetchUser();
+        router.replace('/account-management');
+        return;
+      }
+
+      // 신규 가입 (로그인 화면에서 온 경우)
+      let accessToken: string;
+      let user;
+
+      if (provider === 'kakao' && kakaoAccessToken) {
+        const result = await loginWithKakao({
+          accessToken: kakaoAccessToken,
+          termsVersion: TERMS_VERSION,
+          agreedAt,
+        });
+        accessToken = result.accessToken;
+        user = result.user;
+      } else if (provider === 'apple' && appleIdentityToken) {
+        const result = await loginWithApple({
+          identityToken: appleIdentityToken,
+          termsVersion: TERMS_VERSION,
+          agreedAt,
+        });
+        accessToken = result.accessToken;
+        user = result.user;
+      } else {
+        console.error('약관 동의 처리 실패: 로그인 토큰 정보가 없습니다.');
+        return;
+      }
+
+      if (Platform.OS !== 'web') {
+        await SecureStore.setItemAsync('authToken', accessToken);
+      }
+      await fetchUser();
+      router.replace(user.hasSeenOnboarding ? '/(tabs)' : '/(tutorial)');
+    } catch (error) {
+      console.error('약관 동의 처리 실패:', error);
+      // TODO: 에러 발생 시 사용자에게 보여줄 알림 UI 추가 필요
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -78,15 +157,12 @@ export default function TermsScreen() {
 
         <TouchableOpacity
           style={[styles.btnAgree, requiredChecked ? styles.btnAgreeActive : styles.btnAgreeDisabledBg]}
-          disabled={!requiredChecked}
+          disabled={!requiredChecked || submitting}
           activeOpacity={0.8}
-          onPress={() => {
-            // TODO: API 연결 후 — 약관 동의 정보(TERMS_VERSION, agreedAt) 서버에 저장
-            router.replace('/(tutorial)');
-          }}
+          onPress={handleAgree}
         >
           <Text style={requiredChecked ? styles.btnAgreeTextActive : styles.btnAgreeText}>
-            동의하고 시작하기
+            {submitting ? '처리 중...' : '동의하고 시작하기'}
           </Text>
         </TouchableOpacity>
       </View>

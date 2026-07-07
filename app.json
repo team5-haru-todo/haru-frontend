@@ -71,12 +71,14 @@
             "useFrameworks": "static",
             "forceStaticLinking": [
               "RNFBApp",
-              "RNFBMessaging"
+              "RNFBMessaging",
+              "RNFBAnalytics"
             ]
           }
         }
       ],
-      "./plugins/withFirebaseStaticFramework"
+      "./plugins/withFirebaseStaticFramework",
+      "@react-native-firebase/analytics"
     ],
     "experiments": {
       "typedRoutes": true,

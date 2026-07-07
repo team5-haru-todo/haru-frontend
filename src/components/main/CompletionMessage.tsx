@@ -57,7 +57,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.lg,
     width: '100%',
-    paddingTop: spacing.xxxl,
+    // ScrollView(index.tsx)가 이 컴포넌트 전체를 세로 중앙 정렬하는데, 이 paddingTop만
+    // 위쪽에 추가로 더해져서 헤더→체크 간격이 버튼→탭바 간격보다 훨씬 넓어 보였다.
+    // 대응하는 paddingBottom이 없어 위/아래가 비대칭이라 제거해 자동 중앙 정렬에 맡긴다.
   },
   // Figma TextGroup_Greeting 294x182 hug — 투두 문장 길이가 가변적이라 height 대신 minHeight로 잘림 방지
   greetingGroup: {
@@ -72,8 +74,8 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   checkIcon: {
-    width: 58,
-    height: 58,
+    width: 48,
+    height: 48,
   },
   completedLabel: {
     ...typography.b2BodyBold,
