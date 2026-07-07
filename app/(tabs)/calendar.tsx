@@ -78,7 +78,7 @@ useFocusEffect(
         console.error('캘린더 조회 실패:', requestError);
 
         if (active) {
-          setError('캘린더 기록을 불러오지 못했어요.');
+          setError('인터넷 연결이 불안정해요.');
         }
       } finally {
         if (active) {
