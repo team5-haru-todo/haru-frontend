@@ -10,6 +10,7 @@ export interface LoginResponse {
     nickname: string;
     status: string;
     connectedProviders: string[];
+    hasSeenOnboarding: boolean;
   };
 }
 
@@ -40,6 +41,16 @@ export async function loginWithApple(request: AppleLoginRequest): Promise<LoginR
   return response.data.data;
 }
 
+export async function linkKakao(request: KakaoLoginRequest): Promise<LoginResponse> {
+  const response = await apiClient.post('/api/auth/kakao/link', request);
+  return response.data.data;
+}
+
+export async function linkApple(request: AppleLoginRequest): Promise<LoginResponse> {
+  const response = await apiClient.post('/api/auth/apple/link', request);
+  return response.data.data;
+}
+
 export async function logout(): Promise<void> {
   try {
     await apiClient.post('/api/auth/logout');
@@ -50,4 +61,8 @@ export async function logout(): Promise<void> {
     }
     router.replace('/(auth)/login');
   }
+}
+
+export async function completeOnboarding(): Promise<void> {
+  await apiClient.post('/api/users/me/onboarding');
 }

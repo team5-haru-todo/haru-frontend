@@ -8,6 +8,7 @@ export interface UserResponse {
   termsVersion: string | null;
   termsAgreedAt: string | null;
   createdAt: string;
+  hasSeenOnboarding: boolean;
 }
 
 export interface UserSettingsResponse {

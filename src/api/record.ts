@@ -1,5 +1,6 @@
 import { apiClient } from './client';
 import type { TaskType } from './task';
+import { logEvent } from '@/src/lib/analytics';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -78,6 +79,7 @@ export async function createTodayTask(
     content,
     taskType,
   });
+  logEvent('task_created', { task_type: taskType ?? 'GENERAL' });
   return response.data.data;
 }
 
@@ -86,6 +88,7 @@ export async function setTodayTask(taskId: number): Promise<TodayTaskSetResponse
   const response = await apiClient.patch<ApiResponse<TodayTaskSetResponse>>('/api/today/task', {
     taskId,
   });
+  logEvent('task_selected_from_memo');
   return response.data.data;
 }
 
@@ -110,6 +113,10 @@ export async function getToday(): Promise<TodayResponse> {
 // 오늘의 한 개 첫 완료 처리 (record 도메인)
 export async function completeToday(): Promise<FirstCompleteResponse> {
   const response = await apiClient.post<ApiResponse<FirstCompleteResponse>>('/api/today/complete');
+  logEvent('task_completed', {
+    completion_type: 'FIRST',
+    streak: response.data.data.streak?.currentStreak ?? 0,
+  });
   return response.data.data;
 }
 
@@ -124,5 +131,6 @@ export async function completeAdditional(taskId: number): Promise<AdditionalComp
     '/api/today/additional-complete',
     { taskId }
   );
+  logEvent('task_completed', { completion_type: 'ADDITIONAL' });
   return response.data.data;
 }

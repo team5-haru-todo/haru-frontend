@@ -14,7 +14,7 @@ import { DeleteMemoModal } from '@/src/components/memo/DeleteMemoModal';
 import { MemoCard, type MemoCardProps } from '@/src/components/memo/MemoCard';
 import { useMemos } from '@/src/hooks/useMemos';
 import { useToastStore } from '@/src/store/toastStore';
-import { colors, radius, spacing, typography } from '@/src/constants';
+import { colors, layout, radius, spacing, typography } from '@/src/constants';
 
 // 헤더/입력/메모를 하나의 드래그 리스트에 담기 위한 아이템 타입 (nesting 제거용)
 type MemoListItem =
@@ -364,14 +364,16 @@ const styles = StyleSheet.create({
   },
   input: {
     width: '100%',
+    height: layout.memoInputHeight,
     borderWidth: 1,
     borderColor: colors.primary.default,
     borderRadius: radius.button,
     backgroundColor: colors.surface.default,
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 0,
     ...typography.b3BodyRegular,
     color: colors.text.primary,
+    textAlignVertical: 'center',
   },
   addButtonWrapper: {
     width: '100%',

@@ -76,7 +76,8 @@
           }
         }
       ],
-      "./plugins/withFirebaseStaticFramework"
+      "./plugins/withFirebaseStaticFramework",
+      "@react-native-firebase/analytics"
     ],
     "experiments": {
       "typedRoutes": true,
