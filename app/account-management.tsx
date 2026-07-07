@@ -10,13 +10,10 @@ import { StatusBarSpacer } from '@/src/components/common/StatusBarSpacer';
 import { ConfirmDialog } from '@/src/components/common/ConfirmDialog';
 import { GuestLogoutDialog } from '@/src/components/common/GuestLogoutDialog';
 import { getMe, UserResponse } from '@/src/api/user';
-import { logout, linkKakao, linkApple } from '@/src/api/auth';
+import { logout } from '@/src/api/auth';
 
 const ICON_ARROW_LEFT = require('../assets/images/Icon/Arrow_left.png');
 const ICON_ARROW_RIGHT = require('../assets/images/Icon/Arrow_Right_xs.png');
-
-// TODO: 약관 화면(terms.tsx) 정식 연동 전까지 임시 고정값 사용
-const TEMP_TERMS_VERSION = 'v1.0';
 
 export default function AccountManagementScreen() {
   const [user, setUser] = useState<UserResponse | null>(null);
@@ -24,17 +21,6 @@ export default function AccountManagementScreen() {
   const [linking, setLinking] = useState(false);
   const [logoutDialogVisible, setLogoutDialogVisible] = useState(false);
   const isGuest = user?.status === 'GUEST';
-
-  const fetchData = async () => {
-    try {
-      const me = await getMe();
-      setUser(me);
-    } catch (error) {
-      console.error('계정 정보 조회 실패:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
     let isMounted = true;
@@ -75,20 +61,19 @@ export default function AccountManagementScreen() {
     }
   };
 
+  // 연동은 SDK 로그인만 먼저 진행하고, 실제 연동 API 호출은 약관 동의 화면에서 처리한다.
   const handleLinkKakao = async () => {
     if (linking) return;
     setLinking(true);
     try {
       const kakaoToken = await kakaoLogin();
-      await linkKakao({
-        accessToken: kakaoToken.accessToken,
-        termsVersion: TEMP_TERMS_VERSION,
-        agreedAt: new Date().toISOString(),
+      router.push({
+        pathname: '/(auth)/terms',
+        params: { provider: 'kakao', kakaoAccessToken: kakaoToken.accessToken, mode: 'link' },
       });
-      await fetchData();
     } catch (error) {
-      console.error('카카오 계정 연동 실패:', error);
-      // TODO: 에러 발생 시 사용자에게 보여줄 알림 UI 추가 필요 (이미 연동된 계정인 경우 등)
+      console.error('카카오 로그인 실패:', error);
+      // TODO: 에러 발생 시 사용자에게 보여줄 알림 UI 추가 필요
     } finally {
       setLinking(false);
     }
@@ -109,17 +94,15 @@ export default function AccountManagementScreen() {
         throw new Error('Apple identityToken을 받지 못했습니다.');
       }
 
-      await linkApple({
-        identityToken: credential.identityToken,
-        termsVersion: TEMP_TERMS_VERSION,
-        agreedAt: new Date().toISOString(),
+      router.push({
+        pathname: '/(auth)/terms',
+        params: { provider: 'apple', appleIdentityToken: credential.identityToken, mode: 'link' },
       });
-      await fetchData();
     } catch (error: any) {
       if (error?.code === 'ERR_REQUEST_CANCELED') {
         // 사용자가 직접 취소한 경우 - 에러 처리 불필요
       } else {
-        console.error('Apple 계정 연동 실패:', error);
+        console.error('Apple 로그인 실패:', error);
         // TODO: 에러 발생 시 사용자에게 보여줄 알림 UI 추가 필요
       }
     } finally {
