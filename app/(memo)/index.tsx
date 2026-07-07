@@ -61,6 +61,7 @@ export default function MemoListScreen() {
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editText, setEditText] = useState('');
+  const memoSubmittingRef = useRef(false);
   const editSubmittingRef = useRef(false);
 
   // 도전 = 이 할 일을 오늘의 한 개로 설정 (record 도메인) → 성공 시 전역 토스트
@@ -79,6 +80,10 @@ export default function MemoListScreen() {
   };
 
   const handleSubmitMemo = async () => {
+    if (memoSubmittingRef.current) {
+      return;
+    }
+
     const content = memoText.trim();
     if (content.length === 0) {
       setMemoText('');
@@ -86,10 +91,15 @@ export default function MemoListScreen() {
       return;
     }
 
-    const success = await addMemo(content);
-    if (success) {
-      setMemoText('');
-      setIsAdding(false);
+    memoSubmittingRef.current = true;
+    try {
+      const success = await addMemo(content);
+      if (success) {
+        setMemoText('');
+        setIsAdding(false);
+      }
+    } finally {
+      memoSubmittingRef.current = false;
     }
   };
 
@@ -143,6 +153,7 @@ export default function MemoListScreen() {
       value={memoText}
       onChangeText={setMemoText}
       onSubmitEditing={handleSubmitMemo}
+      onBlur={handleSubmitMemo}
       returnKeyType="done"
       placeholder="할 일을 적어보세요"
       placeholderTextColor={colors.text.placeholder}
