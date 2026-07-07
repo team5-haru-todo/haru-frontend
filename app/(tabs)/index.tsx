@@ -14,6 +14,7 @@ import { StatusBarSpacer } from "@/src/components/common/StatusBarSpacer";
 import { CheckButton } from "@/src/components/main/CheckButton";
 import { CompletionMessage } from "@/src/components/main/CompletionMessage";
 import { EmptyState } from "@/src/components/main/EmptyState";
+import { MainCardWithMemoLinkLayout } from "@/src/components/main/MainCardWithMemoLinkLayout";
 import MemoPreviewSheet from "@/src/components/main/MemoPreviewSheet";
 import { NotificationPermissionModal } from "@/src/components/main/NotificationPermissionModal";
 import { StreakBadge } from "@/src/components/main/StreakBadge";
@@ -33,11 +34,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   AppState,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import { registerForPushNotifications } from "@/src/services/pushNotifications";
@@ -354,7 +357,7 @@ export default function MainScreen() {
     await saveEditingTaskIfNeeded();
   };
 
-  // Empty 상태의 Link_ChooseFromMemo — 오늘의 한 개를 메모장에서 고르는 흐름
+  // Link_ChooseFromMemo — empty/selected 공통으로 오늘의 한 개를 메모장에서 고르는 흐름
   const handleOpenMemoPreviewForSelect = () => {
     setShowMemoPreview(true);
   };
@@ -450,56 +453,60 @@ export default function MainScreen() {
           style={styles.flex}
           behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-          <View style={styles.container}>
-            <View style={styles.header}>
-              <Text style={styles.dateLabel}>{today}</Text>
-              <StreakBadge count={streakCount} />
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+            <View style={styles.container}>
+              <View style={styles.header}>
+                <Text style={styles.dateLabel}>{today}</Text>
+                <StreakBadge count={streakCount} />
+              </View>
+
+              <ScrollView
+                style={styles.scrollFlex}
+                contentContainerStyle={styles.scrollContent}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+              >
+                {mainState === "empty" && (
+                  <EmptyState
+                    onSubmit={handleSubmitTask}
+                    onChooseFromMemo={handleOpenMemoPreviewForSelect}
+                  />
+                )}
+
+                {mainState === "selected" && (
+                  <MainCardWithMemoLinkLayout onChoosePress={handleOpenMemoPreviewForSelect}>
+                    <TodayTaskCard
+                      content={taskContent}
+                      isEditing={false}
+                      onPressEdit={handlePressEdit}
+                      footer={<CheckButton onPress={handleComplete} />}
+                    />
+                  </MainCardWithMemoLinkLayout>
+                )}
+
+                {mainState === "editing" && (
+                  <TodayTaskCard
+                    content={editingText}
+                    isEditing={true}
+                    onPressEdit={handlePressEdit}
+                    onChangeText={setEditingText}
+                    onBlur={handleBlurEdit}
+                    footer={<CheckButton onPress={handleComplete} />}
+                  />
+                )}
+
+                {mainState === "completed" && (
+                  <CompletionMessage
+                    taskContent={taskContent}
+                    streakCount={streakCount}
+                    todayDayIndex={todayDayIndex}
+                    completedDays={completedDays}
+                    onExtra={handleExtra}
+                  />
+                )}
+              </ScrollView>
             </View>
-
-            <ScrollView
-              style={styles.scrollFlex}
-              contentContainerStyle={styles.scrollContent}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
-              {mainState === "empty" && (
-                <EmptyState
-                  onSubmit={handleSubmitTask}
-                  onChooseFromMemo={handleOpenMemoPreviewForSelect}
-                />
-              )}
-
-              {mainState === "selected" && (
-                <TodayTaskCard
-                  content={taskContent}
-                  isEditing={false}
-                  onPressEdit={handlePressEdit}
-                  footer={<CheckButton onPress={handleComplete} />}
-                />
-              )}
-
-              {mainState === "editing" && (
-                <TodayTaskCard
-                  content={editingText}
-                  isEditing={true}
-                  onPressEdit={handlePressEdit}
-                  onChangeText={setEditingText}
-                  onBlur={handleBlurEdit}
-                  footer={<CheckButton onPress={handleComplete} />}
-                />
-              )}
-
-              {mainState === "completed" && (
-                <CompletionMessage
-                  taskContent={taskContent}
-                  streakCount={streakCount}
-                  todayDayIndex={todayDayIndex}
-                  completedDays={completedDays}
-                  onExtra={handleExtra}
-                />
-              )}
-            </ScrollView>
-          </View>
+          </TouchableWithoutFeedback>
         </KeyboardAvoidingView>
       </View>
       <NotificationPermissionModal

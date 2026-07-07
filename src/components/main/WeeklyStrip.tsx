@@ -78,8 +78,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   dayIcon: {
-    width: 32,
-    height: 32,
+    width: 26,
+    height: 26,
   },
   dayLabel: {
     ...typography.c1Caption,
