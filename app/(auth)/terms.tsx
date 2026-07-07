@@ -44,6 +44,10 @@ export default function TermsScreen() {
 
   const isLinkMode = mode === 'link';
 
+  const handleBack = () => {
+    router.back();
+  };
+
   const handleAgree = async () => {
     if (submitting) return;
     setSubmitting(true);
@@ -109,10 +113,15 @@ export default function TermsScreen() {
       <View style={[styles.statusBarSpacer, { height: Math.max(insets.top, 54) }]} />
 
       <View style={styles.navBar}>
-        <TouchableOpacity style={styles.backButton} activeOpacity={0.7} onPress={() => router.back()}>
+        <TouchableOpacity
+          style={styles.backButton}
+          activeOpacity={0.7}
+          onPress={handleBack}
+          hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+        >
           <Image source={ICON_ARROW_LEFT} style={styles.navIcon} />
         </TouchableOpacity>
-        <Text style={styles.navTitle}>약관 동의</Text>
+        <Text style={styles.navTitle}pointerEvents="none">약관 동의</Text>
       </View>
 
       <View style={styles.contentArea}>
@@ -177,6 +186,7 @@ const styles = StyleSheet.create({
   statusBarSpacer: { width: '100%' },
 
   navBar: {
+    position: 'relative',
     height: 56,
     flexDirection: 'row',
     alignItems: 'center',
@@ -186,7 +196,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F7F7F7',
     backgroundColor: colors.surface.default,
   },
-  backButton: { width: 24, height: 24, justifyContent: 'center', alignItems: 'center' },
+  backButton: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
   navIcon: { width: 24, height: 24, resizeMode: 'contain' },
   navTitle: {
     ...typography.b1Subtitle,
