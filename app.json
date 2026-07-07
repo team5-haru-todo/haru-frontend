@@ -71,7 +71,8 @@
             "useFrameworks": "static",
             "forceStaticLinking": [
               "RNFBApp",
-              "RNFBMessaging"
+              "RNFBMessaging",
+              "RNFBAnalytics"
             ]
           }
         }
