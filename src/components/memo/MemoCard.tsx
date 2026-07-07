@@ -89,7 +89,10 @@ export function MemoCard({
           </Pressable>
         </View>
       )}>
-      <Pressable style={styles.memoCard} onPress={() => onStartEdit(memo)} onLongPress={onLongPress}>
+      <Pressable
+        style={styles.memoCard}
+        onPress={isChallengeDisabled ? undefined : () => onStartEdit(memo)}
+        onLongPress={onLongPress}>
         <View style={styles.memoCardContent}>
           <Text style={styles.memoCardTitle}>{memo.content}</Text>
           <Text style={styles.memoCardTime}>{formatRelativeDays(memo.createdAt)}</Text>
