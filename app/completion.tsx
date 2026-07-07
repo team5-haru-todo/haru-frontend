@@ -9,6 +9,7 @@ import { HomeIndicatorSpacer } from '@/src/components/common/HomeIndicatorSpacer
 import { StatusBarSpacer } from '@/src/components/common/StatusBarSpacer';
 import { CompletionCelebration } from '@/src/components/main/CompletionCelebration';
 import { DUMMY_COMPLETED_DAYS, DUMMY_TODAY_DAY_INDEX } from '@/src/constants/mainDummy';
+import { logEvent } from '@/src/lib/analytics';
 
 export default function CompletionScreen() {
   // TODO: API 연결 전 더미 흐름 — taskContent/streakCount는 route params로 전달받는다.
@@ -42,12 +43,13 @@ export default function CompletionScreen() {
     const message = `오늘의 한 개 완료!\n"${content}"\n${streakLine}하루한개에서 나의 작은 성취를 기록했어요.`;
 
     try {
-      // 공유 취소는 정상 흐름(에러 아님) — Share.share()가 별도 분기 없이 resolve한다.
-      await Share.share({ message });
-    } catch (error) {
-      console.error('공유 실패:', error);
-      Alert.alert('공유하기 실패', '잠시 후 다시 시도해주세요.');
-    }
+  logEvent('share_clicked', { streak });
+  // 공유 취소는 정상 흐름(에러 아님) — Share.share()가 별도 분기 없이 resolve한다.
+  await Share.share({ message });
+} catch (error) {
+  console.error('공유 실패:', error);
+  Alert.alert('공유하기 실패', '잠시 후 다시 시도해주세요.');
+}
   };
 
   const handleConfirm = () => {

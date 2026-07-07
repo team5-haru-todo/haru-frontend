@@ -11,6 +11,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { loginAsGuest, loginWithApple, loginWithKakao } from '@/src/api/auth';
 import { useUserStore } from '@/src/store/userStore';
 import { HomeIndicatorSpacer } from '@/src/components/common/HomeIndicatorSpacer';
+import { logEvent } from '@/src/lib/analytics';
 
 const AnimatedGradient = Animated.createAnimatedComponent(LinearGradient);
 
@@ -51,6 +52,7 @@ export default function LoginScreen() {
   const handleGuestLogin = async () => {
     if (loading) return;
     setLoading(true);
+    logEvent('login_method_selected', { method: 'guest' });
     try {
       const { accessToken, user } = await loginAsGuest();
       if (Platform.OS !== 'web') {
@@ -69,6 +71,7 @@ export default function LoginScreen() {
   const handleKakaoLogin = async () => {
     if (loading) return;
     setLoading(true);
+    logEvent('login_method_selected', { method: 'kakao' });
     try {
       // 1. 카카오 네이티브 SDK로 카카오 자체 로그인 (기기의 카카오톡 앱 또는 웹뷰)
       const kakaoToken = await kakaoLogin();
@@ -96,6 +99,7 @@ export default function LoginScreen() {
   const handleAppleLogin = async () => {
     if (loading) return;
     setLoading(true);
+    logEvent('login_method_selected', { method: 'apple' });
     try {
       // 1. Apple 네이티브 로그인 UI로 로그인, identityToken(JWT) 받기
       const credential = await AppleAuthentication.signInAsync({
