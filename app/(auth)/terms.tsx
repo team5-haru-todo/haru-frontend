@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { HomeIndicatorSpacer } from '../../src/components/common/HomeIndicatorSpacer';
+import { AlreadyLinkedDialog } from '../../src/components/common/AlreadyLinkedDialog';
 import { useTerms } from '../../src/context/TermsContext';
 import { linkApple, linkKakao, loginWithApple, loginWithKakao } from '@/src/api/auth';
 import { useUserStore } from '@/src/store/userStore';
@@ -32,6 +33,7 @@ export default function TermsScreen() {
   const { agreed, allChecked, requiredChecked, toggleAll } = useTerms();
   const fetchUser = useUserStore((state) => state.fetchUser);
   const [submitting, setSubmitting] = useState(false);
+  const [alreadyLinkedVisible, setAlreadyLinkedVisible] = useState(false);
 
   // login.tsx(신규 가입) 또는 account-management.tsx(게스트 계정 연동)에서
   // 이 화면으로 넘어올 때 함께 전달된 정보. mode로 두 경로를 구분한다.
@@ -99,11 +101,26 @@ export default function TermsScreen() {
       }
       await fetchUser();
       router.replace(user.hasSeenOnboarding ? '/(tabs)' : '/(tutorial)');
-    } catch (error) {
-      console.error('약관 동의 처리 실패:', error);
-      // TODO: 에러 발생 시 사용자에게 보여줄 알림 UI 추가 필요
+    } catch (error: any) {
+      if (error?.response?.status === 409) {
+        // 이미 다른 계정에 연동된 소셜 계정으로 시도한 경우
+        setAlreadyLinkedVisible(true);
+      } else {
+        console.error('약관 동의 처리 실패:', error);
+        // TODO: 그 외 에러에 대한 사용자 안내 UI 추가 필요
+      }
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleAlreadyLinkedConfirm = () => {
+    setAlreadyLinkedVisible(false);
+    // 연동 시도였다면 계정 관리 화면으로, 로그인 시도였다면 로그인 화면으로 되돌려보낸다.
+    if (isLinkMode) {
+      router.replace('/account-management');
+    } else {
+      router.replace('/(auth)/login');
     }
   };
 
@@ -121,7 +138,7 @@ export default function TermsScreen() {
         >
           <Image source={ICON_ARROW_LEFT} style={styles.navIcon} />
         </TouchableOpacity>
-        <Text style={styles.navTitle}pointerEvents="none">약관 동의</Text>
+        <Text style={styles.navTitle} pointerEvents="none">약관 동의</Text>
       </View>
 
       <View style={styles.contentArea}>
@@ -177,6 +194,8 @@ export default function TermsScreen() {
       </View>
 
       <HomeIndicatorSpacer />
+
+      <AlreadyLinkedDialog visible={alreadyLinkedVisible} onConfirm={handleAlreadyLinkedConfirm} />
     </View>
   );
 }
