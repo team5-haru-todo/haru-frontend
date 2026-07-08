@@ -64,7 +64,7 @@ export default function MyPageScreen() {
     if (pushEnabled) {
       setPushEnabled(false);
       try {
-        await updateMySettings(false);
+        await updateMySettings({ pushEnabled: false, notificationPromptSeen: true });
       } catch (error) {
         console.error('푸시알림 설정 변경 실패:', error);
         setPushEnabled(true);

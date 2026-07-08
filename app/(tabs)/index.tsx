@@ -9,7 +9,7 @@ import {
 import type { WeeklyStreakResponse } from "@/src/api/record";
 import { updateTask } from "@/src/api/task";
 import type { TaskResponse } from "@/src/api/task";
-import { updateMySettings } from "@/src/api/user";
+import { getMySettings, updateMySettings } from "@/src/api/user";
 import { StatusBarSpacer } from "@/src/components/common/StatusBarSpacer";
 import { CheckButton } from "@/src/components/main/CheckButton";
 import { CompletionMessage } from "@/src/components/main/CompletionMessage";
@@ -27,7 +27,6 @@ import {
   DUMMY_TODAY_DAY_INDEX,
 } from "@/src/constants/mainDummy";
 import { typography } from "@/src/constants/typography";
-import * as SecureStore from "expo-secure-store";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -47,31 +46,6 @@ import { registerForPushNotifications } from "@/src/services/pushNotifications";
 
 type MainState = "empty" | "selected" | "editing" | "completed";
 
-// 알림 설정 팝업을 이 기기에서 이미 본 적 있는지 여부 — 백엔드 user_settings 필드 추가는 추후 논의,
-// 우선은 SecureStore(이미 client.ts의 authToken 저장에 쓰는 것과 동일한 로컬 저장소)로 최초 1회만 관리한다.
-// 앱 삭제/재설치·저장소 초기화 시 다시 뜨는 것은 로컬 저장 방식의 한계로 허용한다.
-const NOTIFICATION_PROMPT_SEEN_KEY = "notificationPromptSeen";
-
-async function getNotificationPromptSeen(): Promise<boolean> {
-  if (Platform.OS === "web") return false; // SecureStore 웹 미지원 — client.ts와 동일한 처리
-  try {
-    const value = await SecureStore.getItemAsync(NOTIFICATION_PROMPT_SEEN_KEY);
-    return value === "true";
-  } catch (error) {
-    console.error("알림 팝업 노출 여부 조회 실패:", error);
-    return false;
-  }
-}
-
-async function markNotificationPromptSeen(): Promise<void> {
-  if (Platform.OS === "web") return;
-  try {
-    await SecureStore.setItemAsync(NOTIFICATION_PROMPT_SEEN_KEY, "true");
-  } catch (error) {
-    console.error("알림 팝업 노출 여부 저장 실패:", error);
-  }
-}
-
 // "오늘의 한 개"는 백엔드가 Asia/Seoul 날짜(record_date) 기준으로 스코핑하므로,
 // 자정이 지났는지 판단할 때도 기기 로컬 날짜가 아니라 KST 기준 날짜로 비교한다.
 function getKstDateKey(): string {
@@ -79,7 +53,7 @@ function getKstDateKey(): string {
 }
 
 export default function MainScreen() {
-  // 최초 1회만 노출 — 초기값은 false로 두고, 마운트 시 SecureStore 조회 결과에 따라 연다(아래 useEffect).
+  // 최초 1회만 노출 — 초기값은 false로 두고, 마운트 시 서버 조회 결과에 따라 연다(아래 useEffect).
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [showMemoPreview, setShowMemoPreview] = useState(false);
   // API 연결 6단계 — UI 표시용이 아니라 중복 선택 방지용 내부 가드
@@ -120,13 +94,18 @@ export default function MainScreen() {
       });
   }, []);
 
-  // 이 기기에서 알림 설정 팝업을 이미 본 적 있는지 확인 — 없을 때만(최초 1회) 연다.
+  // 이 계정이 메인 알림 팝업을 이미 본 적 있는지 서버 기준으로 확인 — 없을 때만(최초 1회) 연다.
+  // 조회 실패 시에는 이미 본 것으로 간주해 팝업을 띄우지 않는다(네트워크 불안정 시 매번 뜨는 것 방지).
   useEffect(() => {
-    getNotificationPromptSeen().then((seen) => {
-      if (!seen) {
-        setShowNotificationModal(true);
-      }
-    });
+    getMySettings()
+      .then((settings) => {
+        if (!settings.notificationPromptSeen) {
+          setShowNotificationModal(true);
+        }
+      })
+      .catch((error) => {
+        console.error("알림 팝업 노출 여부 조회 실패:", error);
+      });
   }, []);
 
   const streakCount = weeklyStreak?.currentStreak ?? DUMMY_STREAK;
@@ -389,17 +368,16 @@ export default function MainScreen() {
 
   const handleSkipNotification = async () => {
     // 거절/닫기 — registerForPushNotifications는 호출하지 않는다.
-    // 계정 생성 시 기본값이 pushEnabled=true라서, 서버에 false 저장이 "성공"해야만
-    // 최초 1회 기록을 남기고 팝업을 닫는다. 실패하면 재시도할 수 있도록 팝업을 유지한다.
+    // pushEnabled=false와 notificationPromptSeen=true를 한 번에 저장해야만
+    // 팝업을 닫는다. 실패하면 재시도할 수 있도록 팝업을 유지한다.
     try {
-      await updateMySettings(false);
+      await updateMySettings({ pushEnabled: false, notificationPromptSeen: true });
     } catch (error) {
       console.error('푸시 알림 설정(OFF) 저장 실패:', error);
       Alert.alert('알림 설정 저장에 실패했습니다.', '다시 시도해주세요.');
       return;
     }
     setShowNotificationModal(false);
-    await markNotificationPromptSeen();
   };
 
   const handleAgreeNotification = async () => {
@@ -425,11 +403,11 @@ export default function MainScreen() {
       }
 
       if (!registered) {
-        // 권한 거부/등록 실패면 registerForPushNotifications 내부에서 pushEnabled=true를 저장하지
-        // 않으므로, 계정 생성 시 기본값(true)이 그대로 남지 않도록 여기서 false로 맞춘다.
-        // 이 저장이 성공해야만 최초 1회 기록을 남기고 팝업을 닫는다.
+        // 권한 거부/등록 실패면 registerForPushNotifications 내부에서 pushEnabled/notificationPromptSeen을
+        // 저장하지 않으므로, 계정 생성 시 기본값(pushEnabled=true)이 그대로 남지 않도록 여기서 맞춘다.
+        // 이 저장이 성공해야만 팝업을 닫는다.
         try {
-          await updateMySettings(false);
+          await updateMySettings({ pushEnabled: false, notificationPromptSeen: true });
         } catch (updateError) {
           console.error('푸시 알림 설정(OFF) 저장 실패:', updateError);
           Alert.alert('알림 설정 저장에 실패했습니다.', '다시 시도해주세요.');
@@ -437,9 +415,9 @@ export default function MainScreen() {
         }
       }
 
-      // 성공(registered===true)한 경우는 이미 registerForPushNotifications가 true로 저장했다.
+      // 성공(registered===true)한 경우는 이미 registerForPushNotifications가
+      // pushEnabled/notificationPromptSeen을 모두 true로 저장했다.
       setShowNotificationModal(false);
-      await markNotificationPromptSeen();
     } finally {
       setRegisteringPush(false);
     }

@@ -39,7 +39,9 @@ export async function registerForPushNotifications(): Promise<boolean> {
   const token = await getToken(messaging);
 
   await registerDeviceToken(token);
-  await updateMySettings(true);
+  // 이 함수의 성공 = 메인 팝업(허용)이든 마이페이지(토글 ON)든, 계정이 알림 설정에 대한
+  // 결정을 명시적으로 마쳤다는 뜻이므로 notificationPromptSeen도 함께 true로 고정한다.
+  await updateMySettings({ pushEnabled: true, notificationPromptSeen: true });
 
   return true;
 }

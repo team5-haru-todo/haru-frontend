@@ -14,6 +14,13 @@ export interface UserResponse {
 export interface UserSettingsResponse {
   pushEnabled: boolean;
   timezone: string;
+  // 메인 화면 알림 설정 팝업을 이 계정이 이미 봤는지 여부(pushEnabled와 별개).
+  notificationPromptSeen: boolean;
+}
+
+export interface UpdateUserSettingsRequest {
+  pushEnabled?: boolean;
+  notificationPromptSeen?: boolean;
 }
 
 export interface WithdrawRequest {
@@ -31,8 +38,10 @@ export async function getMySettings(): Promise<UserSettingsResponse> {
   return response.data.data;
 }
 
-export async function updateMySettings(pushEnabled: boolean): Promise<UserSettingsResponse> {
-  const response = await apiClient.patch('/api/users/me/settings', { pushEnabled });
+export async function updateMySettings(
+  request: UpdateUserSettingsRequest
+): Promise<UserSettingsResponse> {
+  const response = await apiClient.patch('/api/users/me/settings', request);
   return response.data.data;
 }
 
