@@ -24,15 +24,31 @@ export function CompletionCelebration({
   onConfirm,
 }: Props) {
   const confettiRef = useRef<LottieView>(null);
+  // 웹(lottie-web/dotLottie)은 로드가 비동기라, 430ms 시점에 아직 로드가 안 끝나 있으면
+  // play()가 조용히 무시된다. 로드 완료 여부와 딜레이 경과 여부를 각각 추적해 늦게 로드돼도 재생되게 한다.
+  const isConfettiLoadedRef = useRef(false);
+  const shouldPlayOnLoadRef = useRef(false);
 
   useEffect(() => {
     // check.json은 autoPlay로 즉시 재생
     // confetti.json은 check 시작 후 430ms 딜레이 후 재생
     const timer = setTimeout(() => {
-      confettiRef.current?.play();
+      if (isConfettiLoadedRef.current) {
+        confettiRef.current?.play();
+      } else {
+        shouldPlayOnLoadRef.current = true;
+      }
     }, 430);
     return () => clearTimeout(timer);
   }, []);
+
+  const handleConfettiLoaded = () => {
+    isConfettiLoadedRef.current = true;
+    if (shouldPlayOnLoadRef.current) {
+      shouldPlayOnLoadRef.current = false;
+      confettiRef.current?.play();
+    }
+  };
 
   return (
     <View style={styles.screen}>
@@ -43,6 +59,7 @@ export function CompletionCelebration({
           source={require("../../../assets/animations/confetti.json")}
           autoPlay={false}
           loop={false}
+          onAnimationLoaded={handleConfettiLoaded}
           style={styles.confettiLottie}
           webStyle={{
             position: "absolute",
