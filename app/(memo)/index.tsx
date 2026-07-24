@@ -127,7 +127,9 @@ export default function MemoListScreen() {
     };
   }, [refreshMemos]);
 
-  // 도전 = 이 할 일을 오늘의 한 개로 설정 (record 도메인) → 성공 시 전역 토스트
+  // 도전 = 이 할 일을 오늘의 한 개로 설정 (record 도메인) → 성공 시 메인으로 이동.
+  // 메모장은 메인에서 push되므로 back()으로 복귀하며, 메인은 focus 시 syncTodayState로
+  // 재조회하기 때문에 돌아가면 방금 설정한 '오늘의 한 개'가 반영된다.
   const handleChallenge = async (memo: TaskResponse) => {
     if (memo.completedToday) {
       return;
@@ -140,6 +142,7 @@ export default function MemoListScreen() {
       return;
     }
     useToastStore.getState().show('오늘의 한개로 설정했어요');
+    router.back();
   };
 
   const handleSubmitMemo = async () => {
