@@ -30,7 +30,7 @@ const TERMS: { id: number; key: 'service' | 'privacy' | 'marketing'; label: stri
 export default function TermsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { agreed, allChecked, requiredChecked, toggleAll } = useTerms();
+  const { agreed, allChecked, requiredChecked, toggleAll, setAgreed } = useTerms();
   const fetchUser = useUserStore((state) => state.fetchUser);
   const [submitting, setSubmitting] = useState(false);
   const [alreadyLinkedVisible, setAlreadyLinkedVisible] = useState(false);
@@ -164,19 +164,26 @@ export default function TermsScreen() {
 
           <View>
             {TERMS.map((term) => (
-              <TouchableOpacity
-                key={term.id}
-                style={styles.termItem}
-                activeOpacity={0.7}
-                onPress={() => router.push(term.route as any)}
-              >
-                <Image
-                  source={agreed[term.key] ? ICON_CHECK_LINE_ON : ICON_CHECK_LINE_OFF}
-                  style={styles.termIcon}
-                />
-                <Text style={styles.termLabel}>{term.label}</Text>
-                <Image source={ICON_ARROW_RIGHT} style={styles.termIcon} />
-              </TouchableOpacity>
+              <View key={term.id} style={styles.termItem}>
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => setAgreed(term.key, !agreed[term.key])}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Image
+                    source={agreed[term.key] ? ICON_CHECK_LINE_ON : ICON_CHECK_LINE_OFF}
+                    style={styles.termIcon}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.termLabelArea}
+                  activeOpacity={0.7}
+                  onPress={() => router.push(term.route as any)}
+                >
+                  <Text style={styles.termLabel}>{term.label}</Text>
+                  <Image source={ICON_ARROW_RIGHT} style={styles.termIcon} />
+                </TouchableOpacity>
+              </View>
             ))}
           </View>
         </View>
@@ -261,6 +268,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   termIcon: { width: 24, height: 24, resizeMode: 'contain' },
+  termLabelArea: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   termLabel: { ...typography.b3BodyRegular, color: colors.text.primary, flex: 1 },
 
   btnAgree: {
