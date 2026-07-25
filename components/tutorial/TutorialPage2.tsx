@@ -400,7 +400,7 @@ const styles = StyleSheet.create({
   },
 
   eyebrow: {
-    ...typography.b1Body1,
+    ...typography.c1Caption,
     marginBottom: 10,
     color: colors.text.secondary,
     textAlign: 'center',
