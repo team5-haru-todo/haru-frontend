@@ -26,12 +26,17 @@ export interface AppleLoginRequest {
   agreedAt: string;
 }
 
+export interface GuestLoginRequest {
+  termsVersion: string;
+  agreedAt: string;
+}
+
 export interface SocialUserCheckResponse {
   isNewUser: boolean;
 }
 
-export async function loginAsGuest(): Promise<LoginResponse> {
-  const response = await apiClient.post('/api/auth/guest');
+export async function loginAsGuest(request: GuestLoginRequest): Promise<LoginResponse> {
+  const response = await apiClient.post('/api/auth/guest', request);
   return response.data.data;
 }
 

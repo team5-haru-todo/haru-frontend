@@ -52,23 +52,14 @@ export default function LoginScreen() {
     ).start();
   }, []);
 
-  const handleGuestLogin = async () => {
+  const handleGuestLogin = () => {
     if (loading) return;
-    setLoading(true);
     logEvent('login_method_selected', { method: 'guest' });
-    try {
-      const { accessToken, user } = await loginAsGuest();
-      if (Platform.OS !== 'web') {
-        await SecureStore.setItemAsync('authToken', accessToken);
-      }
-      await fetchUser();
-      router.replace(user.hasSeenOnboarding ? '/(tabs)' : '/(tutorial)');
-    } catch (error) {
-      console.error('게스트 로그인 실패:', error);
-      // TODO: 에러 발생 시 사용자에게 보여줄 알림 UI 추가 필요
-    } finally {
-      setLoading(false);
-    }
+    // 게스트도 최초 진입 시 약관 동의가 필요 — 실제 가입 처리는 terms.tsx에서 완료된다.
+    router.push({
+      pathname: '/(auth)/terms',
+      params: { provider: 'guest' },
+    });
   };
 
   const handleKakaoLogin = async () => {
