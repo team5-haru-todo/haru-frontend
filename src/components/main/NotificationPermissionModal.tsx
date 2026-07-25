@@ -10,7 +10,7 @@ import {
   View,
 } from "react-native";
 
-const APP_ICON = require("../../../assets/images/app-icon.png");
+const NOTIFICATION_ICON = require("../../../assets/images/Icon/Ic_Notification.png");
 
 type Props = {
   visible: boolean;
@@ -31,56 +31,44 @@ export function NotificationPermissionModal({
       transparent={true}
       animationType="fade"
       statusBarTranslucent
+      onRequestClose={onSkip}
     >
       <View style={styles.overlay}>
         <View style={styles.card}>
-          {/* Header: X 닫기 버튼 */}
-          <View style={styles.header}>
-            <TouchableOpacity
-              style={[styles.closeButton, { outlineStyle: "none" } as any]}
-              onPress={onSkip}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Image
-                source={require("../../../assets/images/close.png")}
-                style={styles.closeIcon}
-                resizeMode="contain"
-              />
-            </TouchableOpacity>
+          <View style={styles.intro}>
+            <Image
+              source={NOTIFICATION_ICON}
+              style={styles.notificationIcon}
+              resizeMode="contain"
+            />
+            <View style={styles.textGroup}>
+              <Text style={styles.title}>잠깐, 알림을 켜볼까요?</Text>
+              <Text style={styles.body}>
+                오늘의 한 개를 잊지 않도록 알려드릴게요
+              </Text>
+            </View>
           </View>
 
-          {/* 제목 + 본문 */}
-          <View style={styles.textGroup}>
-            <Text style={styles.title}>알림 설정</Text>
-            <Text style={styles.body}>
-              {"오늘의 할 일을 잊지 않도록\n딱 맞는 시간에 알려드릴게요!"}
-            </Text>
-          </View>
-
-          {/* 알림 예시 카드 */}
           <View style={styles.previewCard}>
-            <Image source={APP_ICON} style={styles.appIcon} resizeMode="cover" />
+            <View style={styles.appIconPlaceholder} />
             <View style={styles.previewText}>
               <View style={styles.previewHeader}>
                 <Text style={styles.appName}>하루한개</Text>
                 <Text style={styles.timestamp}>2분 전</Text>
               </View>
               <Text style={styles.previewBody} numberOfLines={2}>
-                {
-                  "오늘의 하루한개 '영단어 외우기' 가벼운 마음으로 지금 시작해 볼까요? 🌱"
-                }
+                ‘영어단어 외우기’ 오늘의 한 개, 시작해볼까요?✨
               </Text>
             </View>
           </View>
 
-          {/* 하단 버튼 */}
           <View style={styles.buttonRow}>
             <TouchableOpacity
               style={styles.btnSkip}
               onPress={onSkip}
               activeOpacity={0.8}
             >
-              <Text style={styles.btnSkipText}>다음에 할게요</Text>
+              <Text style={styles.btnSkipText}>나중에</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.btnAgree}
@@ -89,7 +77,7 @@ export function NotificationPermissionModal({
               activeOpacity={0.8}
             >
               <Text style={styles.btnAgreeText}>
-                {agreeing ? '설정 중...' : '동의하고 알림 받기'}
+                {agreeing ? "설정 중..." : "알림 받기"}
               </Text>
             </TouchableOpacity>
           </View>
@@ -102,42 +90,35 @@ export function NotificationPermissionModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.16)",
+    backgroundColor: "rgba(0,0,0,0.5)",
     alignItems: "center",
     justifyContent: "center",
-    // 카드 width:350이 좁은 기기(화면폭 <390)에서 여백 없이 꽉 찰 수 있어 좌우 최소 여백 확보
-    paddingHorizontal: 20,
+    paddingHorizontal: spacing.xxl,
   },
   card: {
     backgroundColor: colors.surface.default,
     borderRadius: radius.card,
-    padding: spacing.xxl,
-    gap: 28,
-    // Figma 기준 350 고정폭이되, 좁은 기기 대응을 위해 100%+maxWidth로 캡
+    paddingTop: 30,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xl,
+    gap: 30,
     width: "100%",
-    maxWidth: 350,
-    // Figma 기준 height 384 고정
-    height: 384,
+    maxWidth: 342,
+    alignItems: "center",
+    overflow: "hidden",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
     shadowRadius: 24,
     elevation: 8,
   },
-  header: {
-    alignItems: "flex-end",
-    width: "100%",
+  intro: {
+    alignItems: "center",
+    gap: spacing.xl,
   },
-  closeButton: {
+  notificationIcon: {
     width: 24,
     height: 24,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  closeIcon: {
-    width: 16,
-    height: 16,
-    tintColor: colors.text.primary,
   },
   textGroup: {
     alignItems: "center",
@@ -145,12 +126,12 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   title: {
-    ...typography.t1Title1,
+    ...typography.b1Subtitle,
     color: colors.text.primary,
     textAlign: "center",
   },
   body: {
-    ...typography.b3BodyRegular,
+    ...typography.b4BodySm,
     color: colors.text.primary,
     textAlign: "center",
   },
@@ -168,11 +149,10 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  appIcon: {
+  appIconPlaceholder: {
     width: 40,
     height: 40,
-    borderRadius: 8,
-    overflow: "hidden",
+    backgroundColor: colors.surface.default,
     flexShrink: 0,
   },
   previewText: {
@@ -228,4 +208,3 @@ const styles = StyleSheet.create({
     color: colors.surface.default,
   },
 });
-
