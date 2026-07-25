@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useRouter } from 'expo-router';
+import { useRouter, useSegments } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -22,9 +22,9 @@ import { setTodayTask } from '@/src/api/record';
 import type { TaskResponse } from '@/src/api/task';
 import { DeleteMemoModal } from '@/src/components/memo/DeleteMemoModal';
 import { MemoCard, type MemoCardProps } from '@/src/components/memo/MemoCard';
+import { colors, layout, radius, spacing, typography } from '@/src/constants';
 import { useMemos } from '@/src/hooks/useMemos';
 import { useToastStore } from '@/src/store/toastStore';
-import { colors, layout, radius, spacing, typography } from '@/src/constants';
 
 // 헤더/입력/메모를 하나의 드래그 리스트에 담기 위한 아이템 타입 (nesting 제거용)
 type MemoListItem =
@@ -65,10 +65,17 @@ function DraggableMemoRow(props: MemoCardProps) {
 
 export default function MemoListScreen() {
   const router = useRouter();
+  const segments = useSegments();
   const insets = useSafeAreaInsets();
-  const bottomInset =
+  const isMemoTab = segments[0] === '(tabs)';
+  const deviceBottomInset =
     Platform.OS === 'android' ? Math.max(insets.bottom, ANDROID_MIN_BOTTOM_INSET) : insets.bottom;
-  const listBottomPadding = ADD_BUTTON_HEIGHT + ADD_BUTTON_VERTICAL_GAP + bottomInset + LIST_BOTTOM_GAP;
+  const tabBarHeight =
+    layout.tabBarHeight +
+    (Platform.OS === 'android' ? Math.max(deviceBottomInset - 25, 0) : 0);
+  const screenBottomInset = isMemoTab ? 0 : deviceBottomInset;
+  const listBottomPadding =
+    ADD_BUTTON_HEIGHT + ADD_BUTTON_VERTICAL_GAP + screenBottomInset + LIST_BOTTOM_GAP;
   const {
     memos,
     loading,
@@ -313,13 +320,15 @@ export default function MemoListScreen() {
   };
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, isMemoTab && { paddingBottom: tabBarHeight }]}>
       <View style={[styles.navBar, { paddingTop: insets.top }]}>
         <View style={styles.navBarRow}>
           <Text style={styles.navBarTitle}>메모장</Text>
-          <Pressable style={styles.closeButton} onPress={() => router.back()} hitSlop={8}>
-            <Ionicons name="close" size={24} color={colors.text.primary} />
-          </Pressable>
+          {!isMemoTab && (
+            <Pressable style={styles.closeButton} onPress={() => router.back()} hitSlop={8}>
+              <Ionicons name="close" size={24} color={colors.text.primary} />
+            </Pressable>
+          )}
         </View>
       </View>
 
@@ -359,7 +368,7 @@ export default function MemoListScreen() {
       </View>
 
       {!loading && !(isAdding && memos.length === 0) && (
-        <View style={[styles.addButtonWrapper, { paddingBottom: bottomInset }]}>
+        <View style={[styles.addButtonWrapper, { paddingBottom: screenBottomInset }]}>
           <Pressable
             style={styles.addButton}
             onPress={() => {

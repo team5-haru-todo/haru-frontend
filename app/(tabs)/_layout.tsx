@@ -8,6 +8,7 @@ import { layout } from '@/src/constants/layout';
 
 const ICON_HOME_ACTIVE = require('../../assets/images/Icon/Tab_Home_Active.png');
 const ICON_HOME_INACTIVE = require('../../assets/images/Icon/Tab_Home_Inactive.png');
+const ICON_MEMO = require('../../assets/images/Todolist_ic.png');
 const ICON_CALENDAR_ACTIVE = require('../../assets/images/Icon/Tab_Calendar_Active.png');
 const ICON_CALENDAR_INACTIVE = require('../../assets/images/Icon/Tab_Calendar_Inactive.png');
 const ICON_MYPAGE_ACTIVE = require('../../assets/images/Icon/Tab_Mypage_Active.png');
@@ -68,6 +69,23 @@ export default function TabLayout() {
       <Tabs.Screen
         name="explore"
         options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="memo"
+        options={{
+          title: '메모장',
+          tabBarIcon: ({ focused }) => (
+            <Image
+              source={ICON_MEMO}
+              style={{
+                width: 24,
+                height: 24,
+                resizeMode: 'contain',
+                tintColor: focused ? colors.primary.default : colors.text.tertiary,
+              }}
+            />
+          ),
+        }}
       />
       <Tabs.Screen
         name="calendar"

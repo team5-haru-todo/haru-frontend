@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import {
   getMonthlyCalendar,
@@ -12,7 +12,6 @@ import {
   ScrollView,
   StyleSheet,
   Image,
-  ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
@@ -28,7 +27,15 @@ const ICON_CHECK_EMPTY = require('../../assets/images/Icon/Ic_Check_Cal_Ip.png')
 
 const DAYS_KO = ['일', '월', '화', '수', '목', '금', '토'];
 const DAYS_FULL = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
+const TODO_SKELETONS = [0, 1];
+const EMPTY_CALENDAR_RECORDS: CalendarRecord[] = [];
 
+interface CalendarRequestState {
+  monthKey: string;
+  records: CalendarRecord[];
+  loading: boolean;
+  error: string | null;
+}
 
 function getDaysInMonth(year: number, month: number) {
   return new Date(year, month, 0).getDate();
@@ -38,51 +45,74 @@ function getFirstDayOfWeek(year: number, month: number) {
   return new Date(year, month - 1, 1).getDay();
 }
 
+function getMonthKey(year: number, month: number) {
+  return `${year}-${String(month).padStart(2, '0')}`;
+}
+
 export default function CalendarScreen() {
   const today = new Date();
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(today.getMonth() + 1);
   const [selectedDay, setSelectedDay] = useState<number | null>(today.getDate());
-  const [records, setRecords] = useState<CalendarRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const monthKey = getMonthKey(currentYear, currentMonth);
+  const [calendarState, setCalendarState] = useState<CalendarRequestState>(() => ({
+    monthKey,
+    records: [],
+    loading: true,
+    error: null,
+  }));
   const [streak, setStreak] = useState<StreakSummary | null>(null);
+  const [streakLoading, setStreakLoading] = useState(true);
+
+  const isCurrentMonthState = calendarState.monthKey === monthKey;
+  const records = isCurrentMonthState ? calendarState.records : EMPTY_CALENDAR_RECORDS;
+  const loading = !isCurrentMonthState || calendarState.loading;
+  const error = isCurrentMonthState ? calendarState.error : null;
 
   // 탭 화면은 전환해도 언마운트되지 않아 다른 달을 보던 상태가 남는다.
   // 탭이 다시 focus될 때마다 오늘 기준 연/월/일로 되돌려, 캘린더에 들어오면 항상 이번 달이 보이게 한다.
-useFocusEffect(
-  useCallback(() => {
-    const now = new Date();
-    setCurrentYear(now.getFullYear());
-    setCurrentMonth(now.getMonth() + 1);
-    setSelectedDay(now.getDate());
-    logEvent('calendar_viewed');
-  }, [])
-);
+  useFocusEffect(
+    useCallback(() => {
+      const now = new Date();
+      setCurrentYear(now.getFullYear());
+      setCurrentMonth(now.getMonth() + 1);
+      setSelectedDay(now.getDate());
+      logEvent('calendar_viewed');
+    }, [])
+  );
 
   useEffect(() => {
     let active = true;
 
     async function fetchCalendar() {
-      setLoading(true);
-      setError(null);
-      setRecords([]);
+      setCalendarState({
+        monthKey,
+        records: [],
+        loading: true,
+        error: null,
+      });
 
       try {
         const data = await getMonthlyCalendar(currentYear, currentMonth);
 
         if (active) {
-          setRecords(data);
+          setCalendarState({
+            monthKey,
+            records: data,
+            loading: false,
+            error: null,
+          });
         }
       } catch (requestError) {
         console.error('캘린더 조회 실패:', requestError);
 
         if (active) {
-          setError('인터넷 연결이 불안정해요.');
-        }
-      } finally {
-        if (active) {
-          setLoading(false);
+          setCalendarState({
+            monthKey,
+            records: [],
+            loading: false,
+            error: '인터넷 연결이 불안정해요.',
+          });
         }
       }
     }
@@ -92,7 +122,7 @@ useFocusEffect(
     return () => {
       active = false;
     };
-  }, [currentYear, currentMonth]);
+  }, [currentYear, currentMonth, monthKey]);
 
   useEffect(() => {
     let active = true;
@@ -103,6 +133,9 @@ useFocusEffect(
       })
       .catch((requestError) => {
         console.error('스트릭 조회 실패:', requestError);
+      })
+      .finally(() => {
+        if (active) setStreakLoading(false);
       });
 
     return () => {
@@ -110,12 +143,15 @@ useFocusEffect(
     };
   }, []);
 
-  const daysInMonth = getDaysInMonth(currentYear, currentMonth);
-  const firstDayOfWeek = getFirstDayOfWeek(currentYear, currentMonth);
-  const completedDays = records
-    .filter((record) => record.fireEarned)
-    .map((record) => Number(record.date.slice(8, 10)));
-  const monthlyCompletionCount = completedDays.length;
+  const completedDays = useMemo(
+    () => new Set(
+      records
+        .filter((record) => record.fireEarned)
+        .map((record) => Number(record.date.slice(8, 10)))
+    ),
+    [records]
+  );
+  const monthlyCompletionCount = completedDays.size;
 
   const isToday = (day: number) =>
     day === today.getDate() &&
@@ -134,14 +170,22 @@ useFocusEffect(
     setSelectedDay(null);
   };
 
-  const cells: (number | null)[] = [
-    ...Array(firstDayOfWeek).fill(null),
-    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
-  ];
-  while (cells.length % 7 !== 0) cells.push(null);
+  const weeks = useMemo(() => {
+    const daysInMonth = getDaysInMonth(currentYear, currentMonth);
+    const firstDayOfWeek = getFirstDayOfWeek(currentYear, currentMonth);
+    const cells: (number | null)[] = [
+      ...Array(firstDayOfWeek).fill(null),
+      ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+    ];
 
-  const weeks: (number | null)[][] = [];
-  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+    while (cells.length % 7 !== 0) cells.push(null);
+
+    const calendarWeeks: (number | null)[][] = [];
+    for (let i = 0; i < cells.length; i += 7) {
+      calendarWeeks.push(cells.slice(i, i + 7));
+    }
+    return calendarWeeks;
+  }, [currentYear, currentMonth]);
 
   const selectedDate = selectedDay
     ? `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`
@@ -149,10 +193,13 @@ useFocusEffect(
   const selectedRecord = selectedDate
     ? records.find((record) => record.date === selectedDate)
     : undefined;
-  const selectedTodos = selectedRecord?.completedTasks.map((task) => ({
-    id: task.completionId,
-    text: task.content,
-  })) ?? [];
+  const selectedTodos = useMemo(
+    () => selectedRecord?.completedTasks.map((task) => ({
+      id: task.completionId,
+      text: task.content,
+    })) ?? [],
+    [selectedRecord]
+  );
   const selectedCompletedCount = selectedTodos.length;
 
   const selectedDayName = selectedDay
@@ -176,33 +223,39 @@ useFocusEffect(
           </TouchableOpacity>
         </View>
 
-        {loading && (
-          <View style={styles.feedbackRow}>
-            <ActivityIndicator color={colors.primary.default} />
-            <Text style={styles.feedbackText}>캘린더 기록을 불러오는 중이에요.</Text>
-          </View>
-        )}
-
-        {error && !loading && (
-          <Text style={[styles.feedbackText, styles.errorText]}>{error}</Text>
-        )}
-
         {/* Card_AchieveSummary: gap=12, px=16, py=12, items-center, justify-center */}
         <View style={styles.statsCard}>
           <View style={styles.statCell}>
             <Text style={styles.statLabel}>이번 달 완료</Text>
-            <Text style={styles.statValue}>{monthlyCompletionCount}일</Text>
+            {loading ? (
+              <View style={[styles.skeleton, styles.statValueSkeleton]} />
+            ) : (
+              <Text style={styles.statValue}>{monthlyCompletionCount}일</Text>
+            )}
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statCell}>
             <Text style={styles.statLabel}>연속 달성</Text>
-            <Text style={styles.statValue}>{streak?.currentStreak ?? 0}일</Text>
+            {streakLoading ? (
+              <View style={[styles.skeleton, styles.statValueSkeleton]} />
+            ) : (
+              <Text style={styles.statValue}>{streak?.currentStreak ?? 0}일</Text>
+            )}
           </View>
         </View>
 
         {/* Calendar_Section: flex-col gap=21, items-center, px=20, py=30, flex=1
             Content_Area gap=24 → marginTop=24 */}
-        <View style={styles.calSection}>
+        <View
+          style={styles.calSection}
+          accessibilityState={{ busy: loading }}
+          accessibilityLabel={loading ? '캘린더 기록을 불러오는 중' : undefined}
+        >
+          {error && !loading && (
+            <View style={styles.errorBanner}>
+              <Text style={[styles.feedbackText, styles.errorText]}>{error}</Text>
+            </View>
+          )}
 
           {/* WeekdayHeader: flex-row, gap=10, items-center, justify-center, text-center */}
           <View style={styles.weekdayHeader}>
@@ -239,7 +292,7 @@ useFocusEffect(
 
                   {week.map((day, di) => {
                     if (!day) return <View key={di} style={[styles.stateCell, styles.emptyStateCell]} />;
-                    const completed = completedDays.includes(day);
+                    const completed = completedDays.has(day);
                     const selected = selectedDay === day;
 
                     return (
@@ -248,11 +301,16 @@ useFocusEffect(
                         style={[styles.stateCell, selected && styles.stateCellSelected]}
                         onPress={() => setSelectedDay(day)}
                         activeOpacity={0.7}
+                        disabled={loading}
                       >
-                        <Image
-                          source={completed ? ICON_CHECK_DONE : ICON_CHECK_EMPTY}
-                          style={styles.checkIcon}
-                        />
+                        {loading ? (
+                          <View style={[styles.skeleton, styles.calendarIconSkeleton]} />
+                        ) : (
+                          <Image
+                            source={completed ? ICON_CHECK_DONE : ICON_CHECK_EMPTY}
+                            style={styles.checkIcon}
+                          />
+                        )}
                         <Text style={styles.dayNum}>
                           {day}
                         </Text>
@@ -272,10 +330,19 @@ useFocusEffect(
               <Text style={styles.dateHeaderText}>
                 {currentMonth}.{selectedDay} {selectedDayName}
               </Text>
-              <Text style={styles.dateCountText}>{selectedCompletedCount}개 완료</Text>
+              {loading ? (
+                <View style={[styles.skeleton, styles.dateCountSkeleton]} />
+              ) : (
+                <Text style={styles.dateCountText}>{selectedCompletedCount}개 완료</Text>
+              )}
             </View>
             <View style={styles.todoList}>
-              {selectedTodos.length > 0 ? selectedTodos.map(todo => (
+              {loading ? TODO_SKELETONS.map((item) => (
+                <View key={item} style={styles.todoSkeletonCard}>
+                  <View style={[styles.skeleton, styles.todoTextSkeleton]} />
+                  <View style={[styles.skeleton, styles.calendarIconSkeleton]} />
+                </View>
+              )) : selectedTodos.length > 0 ? selectedTodos.map(todo => (
                 <View key={todo.id} style={styles.todoCard}>
                   <Text style={styles.todoText}>{todo.text}</Text>
                   <Image source={ICON_CHECK_DONE} style={styles.checkIcon} />
@@ -367,6 +434,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignSelf: 'stretch',
     marginTop: 24,
+    position: 'relative',
   },
 
   // WeekdayHeader: flex-row, gap=10, items-center, justify-center, text-center
@@ -509,6 +577,11 @@ const styles = StyleSheet.create({
     color: colors.text.tertiary,
     lineHeight: 16,
   },
+  dateCountSkeleton: {
+    width: 48,
+    height: 16,
+    borderRadius: 4,
+  },
   // List_CompletedTasks: flex-col, gap=8, align-self stretch, items-start
   todoList: {
     flexDirection: 'column',
@@ -528,15 +601,30 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignSelf: 'stretch',
   },
-  // Todo text: flex=1, Regular 16px, lineHeight 24, #259BFF, line-through, text-center
+  // Todo text: flex=1, Regular 16px, lineHeight 24, #259BFF, text-center
   todoText: {
     flex: 1,
     fontSize: 16,
     fontFamily: 'Pretendard-Regular',
     color: '#259BFF',
     lineHeight: 24,
-    textDecorationLine: 'line-through',
     textAlign: 'center',
+  },
+  todoSkeletonCard: {
+    height: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.surface.sunken,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignSelf: 'stretch',
+  },
+  todoTextSkeleton: {
+    flex: 1,
+    height: 16,
+    borderRadius: 4,
   },
   emptyText: {
     fontSize: 14,
@@ -545,12 +633,18 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: 20,
   },
-  feedbackRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
+  skeleton: {
+    backgroundColor: colors.button.disabled,
+  },
+  statValueSkeleton: {
+    width: 42,
+    height: 26,
+    borderRadius: 6,
+  },
+  calendarIconSkeleton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
   },
   feedbackText: {
     fontSize: 14,
@@ -558,9 +652,19 @@ const styles = StyleSheet.create({
     color: colors.text.tertiary,
     textAlign: 'center',
   },
+  errorBanner: {
+    position: 'absolute',
+    top: -18,
+    left: 20,
+    right: 20,
+    zIndex: 20,
+    alignItems: 'center',
+  },
   errorText: {
     color: '#D14343',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 12,
   },
 });

@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { type Href, useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -43,7 +43,7 @@ export default function MemoPreviewSheet({ visible, onClose, onSelect }: Props) 
 
   const handleOpenMemo = () => {
     onClose();
-    router.push('/(memo)');
+    router.navigate('/(tabs)/memo' as Href);
   };
 
   const handleChallenge = (memo: TaskResponse) => {
