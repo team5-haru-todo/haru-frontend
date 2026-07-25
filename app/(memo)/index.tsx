@@ -465,9 +465,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface.default,
     paddingHorizontal: 16,
     paddingVertical: 0,
-    ...typography.b3BodyRegular,
+    // lineHeight를 명시하면 iOS에서 캐럿은 fontSize(16) 기준으로 그려지는데 글자는
+    // lineHeight(24) 줄 안에 배치돼 서로 어긋난다(텍스트가 아래로 처져 보임).
+    // lineHeight는 빼고 폰트의 자연스러운 줄 높이를 쓰되, 세로 공간은 height로 유지한다.
+    fontFamily: typography.b3BodyRegular.fontFamily,
+    fontSize: typography.b3BodyRegular.fontSize,
+    letterSpacing: typography.b3BodyRegular.letterSpacing,
     color: colors.text.primary,
-    textAlignVertical: 'center',
+    textAlignVertical: 'center', // Android 전용: 텍스트 세로 중앙
+    includeFontPadding: false, // Android 전용: 폰트 여분 패딩 제거
   },
   addButtonWrapper: {
     width: '100%',
