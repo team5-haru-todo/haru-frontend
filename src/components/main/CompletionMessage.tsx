@@ -40,11 +40,11 @@ export function CompletionMessage({
       {/* TODO: 추가 완료 화면 라우팅 연결 */}
       <TouchableOpacity style={styles.extraButton} onPress={onExtra} activeOpacity={0.8}>
         <Image
-          source={require('../../../assets/images/list.png')}
+          source={require('../../../assets/images/Todolist_ic.png')}
           style={styles.listIcon}
           resizeMode="contain"
         />
-        <Text style={styles.extraText}>하루 한개 더하기</Text>
+        <Text style={styles.extraText}>한개 더하기</Text>
       </TouchableOpacity>
     </View>
   );

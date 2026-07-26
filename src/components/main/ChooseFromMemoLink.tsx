@@ -13,7 +13,7 @@ type Props = {
 };
 
 // Figma Link_ChooseFromMemo — empty/진행중 화면이 공유하는 "메모장에서 고르기" 링크.
-// 아이콘은 Ic_memo 24x24 에셋이 없어 임시로 list.png 재사용 — TODO: 실제 에셋 교체
+// 아이콘은 Todolist_ic.png를 링크 텍스트와 동일한 primary 색으로 tint해 사용한다.
 export function ChooseFromMemoLink({ onPress }: Props) {
   return (
     <TouchableOpacity
@@ -22,7 +22,7 @@ export function ChooseFromMemoLink({ onPress }: Props) {
       activeOpacity={0.7}
     >
       <Image
-        source={require("../../../assets/images/list.png")}
+        source={require("../../../assets/images/Todolist_ic.png")}
         style={styles.chooseFromMemoIcon}
         resizeMode="contain"
       />

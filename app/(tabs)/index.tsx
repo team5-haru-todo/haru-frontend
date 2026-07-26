@@ -52,6 +52,20 @@ function getKstDateKey(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(new Date());
 }
 
+// 완료 직후, 완료 축하 화면(SCR-003_3)의 개수별 문구에 쓸 "오늘 누적 완료 개수"를 서버 기준으로 가져온다.
+// 로컬 completedCount+1 대신 getToday()를 재조회하는 이유: 프론트 값이 오래됐거나 다른 기기/중복 요청
+// 상황에서도 서버 진짜 값을 표시하기 위함(이 프로젝트의 "서버 응답이 진실 소스" 정책과 일치).
+// 조회 실패 시 undefined를 반환해 param을 생략하면, completion 화면이 방어적으로 1로 fallback한다.
+async function fetchTodayCompletedCountParam(): Promise<string | undefined> {
+  try {
+    const today = await getToday();
+    return String(today.completedTasks.length);
+  } catch (error) {
+    console.error("완료 개수 조회 실패:", error);
+    return undefined;
+  }
+}
+
 export default function MainScreen() {
   // 최초 1회만 노출 — 초기값은 false로 두고, 마운트 시 서버 조회 결과에 따라 연다(아래 useEffect).
   const [showNotificationModal, setShowNotificationModal] = useState(false);
@@ -305,6 +319,7 @@ export default function MainScreen() {
           params: {
             taskContent: data.completion.content,
             streakCount: String(data.streak.currentStreak),
+            completedCount: await fetchTodayCompletedCountParam(),
           },
         });
         return;
@@ -322,6 +337,7 @@ export default function MainScreen() {
           taskContent: data.completion.content,
           // 추가 완료는 스트릭에 영향 없음(백엔드 확인됨) — 서버 응답에 streak가 없으므로 로컬 값 유지
           streakCount: String(streakCount),
+          completedCount: await fetchTodayCompletedCountParam(),
         },
       });
     } catch (error) {
@@ -433,9 +449,11 @@ export default function MainScreen() {
         >
           <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
             <View style={styles.container}>
-              <View style={styles.header}>
-                <Text style={styles.dateLabel}>{today}</Text>
-                <StreakBadge count={streakCount} />
+              <View style={styles.headerOuter}>
+                <View style={styles.headerContent}>
+                  <Text style={styles.dateLabel}>{today}</Text>
+                  <StreakBadge count={streakCount} />
+                </View>
               </View>
 
               <ScrollView
@@ -444,6 +462,7 @@ export default function MainScreen() {
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
               >
+                <View style={styles.mainContent}>
                 {mainState === "empty" && (
                   <EmptyState
                     onSubmit={handleSubmitTask}
@@ -482,6 +501,7 @@ export default function MainScreen() {
                     onExtra={handleExtra}
                   />
                 )}
+                </View>
               </ScrollView>
             </View>
           </TouchableWithoutFeedback>
@@ -515,7 +535,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
+  // 헤더 배경/전체폭은 유지하되(headerOuter), 실제 날짜·배지 내용(headerContent)만
+  // 대형 화면에서 본문과 동일한 maxWidth로 중앙 정렬한다.
+  headerOuter: {
+    width: "100%",
+    alignItems: "center",
+  },
+  headerContent: {
+    width: "100%",
+    maxWidth: 430,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -533,12 +561,21 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     justifyContent: "center",
-    // 카드 그림자(shadowRadius 24)가 ScrollView 프레임 경계에서 잘리지 않도록,
-    // 좌우 여백을 container가 아니라 ScrollView 내부(contentContainerStyle)에 둬서
-    // 클리핑 경계 자체를 화면 전체 폭까지 넓힌다.
-    paddingHorizontal: spacing.xl,
+    // 대형 화면에서 mainContent(maxWidth)를 가로 중앙 정렬한다.
+    alignItems: "center",
     // 중앙 정렬 기준은 실제 탭바 safe area 포함 높이가 아니라 디자인 기준 tabBarHeight를 사용한다.
     // Android 탭바 자체의 safe area 처리는 app/(tabs)/_layout.tsx에서 별도로 한다.
     paddingBottom: layout.tabBarHeight,
+  },
+  // 실제 메인 콘텐츠 래퍼 — 대형 화면(>430px)에서만 폭을 maxWidth로 제한하고 중앙 정렬한다.
+  // flex:1을 주지 않는다: ScrollView contentContainer 안의 flex:1은 높이를 뷰포트로 가둬
+  //   긴 콘텐츠의 스크롤을 막고 잘림을 유발하므로, 세로 중앙정렬은 scrollContent가 담당한다.
+  // 좌우 padding은 과거 scrollContent에 있던 것을 여기로 옮긴 것 — 두 곳 중복 금지.
+  //   390px에서 inner 350 / 카드 342(기존 동일)를 유지하고, ScrollView 자체엔 좌우 padding이
+  //   없어 카드 그림자(shadowRadius 24)는 전체폭 프레임 안에서 잘리지 않는다.
+  mainContent: {
+    width: "100%",
+    maxWidth: 430,
+    paddingHorizontal: spacing.xl,
   },
 });

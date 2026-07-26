@@ -13,10 +13,22 @@ import { logEvent } from '@/src/lib/analytics';
 
 export default function CompletionScreen() {
   // TODO: API 연결 전 더미 흐름 — taskContent/streakCount는 route params로 전달받는다.
-  const { taskContent, streakCount } = useLocalSearchParams<{
+  const { taskContent, streakCount, completedCount } = useLocalSearchParams<{
     taskContent?: string;
     streakCount?: string;
+    completedCount?: string;
   }>();
+
+  // completedCount는 route param(string, 중복 시 string[])으로 오거나 누락될 수 있다.
+  // 완료 화면은 정의상 최소 1개 완료가 존재하므로, NaN/undefined/null/0 이하/소수는 1로 fallback한다.
+  const rawCompletedCount = Array.isArray(completedCount)
+    ? completedCount[0]
+    : completedCount;
+  const parsedCompletedCount = Number(rawCompletedCount);
+  const completedCountValue =
+    Number.isFinite(parsedCompletedCount) && parsedCompletedCount >= 1
+      ? Math.floor(parsedCompletedCount)
+      : 1;
 
   const [weeklyStreak, setWeeklyStreak] = useState<WeeklyStreakResponse | null>(null);
 
@@ -71,6 +83,7 @@ export default function CompletionScreen() {
         streakCount={Number(streakCount ?? 0)}
         todayDayIndex={todayDayIndex}
         completedDays={completedDays}
+        completedCount={completedCountValue}
         onShare={handleShare}
         onConfirm={handleConfirm}
       />
