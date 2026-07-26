@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { setTodayTask } from '@/src/api/record';
 import type { TaskResponse } from '@/src/api/task';
+import { getMySettings, updateMySettings } from '@/src/api/user';
 import { DeleteMemoModal } from '@/src/components/memo/DeleteMemoModal';
 import { MemoCard, type MemoCardProps } from '@/src/components/memo/MemoCard';
 import { MemoTutorialOverlay } from '@/src/components/memo/MemoTutorialOverlay';
@@ -42,9 +43,6 @@ const ADD_BUTTON_HEIGHT = 54;
 const ADD_BUTTON_VERTICAL_GAP = spacing.lg;
 const ANDROID_MIN_BOTTOM_INSET = spacing.xl;
 const LIST_BOTTOM_GAP = spacing.lg;
-
-// 개발 중 화면 확인용. 서버 판정(memoTutorialSeen)을 붙이면 제거한다.
-const FORCE_SHOW_TUTORIAL = true;
 
 // 재정렬된 플랫 리스트를 훑어, 각 메모가 현재 어느 섹션에 속하는지 계산.
 // 즐겨찾기 라벨은 리스트 밖(ListHeaderComponent) 고정이라 시작 섹션은 RECURRING,
@@ -144,22 +142,32 @@ export default function MemoListScreen() {
   }, [refreshMemos]);
 
   // 첫 진입 튜토리얼 노출 판정. 목록 로딩이 끝난 뒤 한 번만 확인한다.
-  // TODO(HARU-60): 백엔드에 memoTutorialSeen이 올라오면
-  // getMySettings()로 조회해 값이 false일 때만 띄우도록 교체한다(undefined면 띄우지 않는다).
+  // 값이 명시적으로 false일 때만 띄운다 — 서버에 필드가 아직 없으면(배포 순서가 어긋난 경우)
+  // undefined가 오는데, 그때 노출해버리면 이미 본 사람에게까지 뜨기 때문이다.
   useEffect(() => {
     if (loading || tutorialCheckedRef.current) {
       return;
     }
     tutorialCheckedRef.current = true;
-    if (FORCE_SHOW_TUTORIAL) {
-      setTutorialVisible(true);
-    }
+    getMySettings()
+      .then((settings) => {
+        if (settings.memoTutorialSeen === false) {
+          setTutorialVisible(true);
+        }
+      })
+      .catch((settingsError) => {
+        console.error('메모 튜토리얼 노출 여부 조회 실패:', settingsError);
+      });
   }, [loading]);
 
-  const handleTutorialFinish = () => {
+  const handleTutorialFinish = async () => {
     setTutorialVisible(false);
-    // TODO(HARU-60): updateMySettings({ memoTutorialSeen: true })
-    // 저장에 실패해도 화면 흐름은 막지 않는다(다음 진입 때 한 번 더 뜨는 정도).
+    try {
+      await updateMySettings({ memoTutorialSeen: true });
+    } catch (error) {
+      // 저장에 실패해도 화면 흐름은 막지 않는다 (다음 진입 때 한 번 더 뜨는 정도).
+      console.error('메모 튜토리얼 완료 저장 실패:', error);
+    }
   };
 
   // 도전 = 이 할 일을 오늘의 한 개로 설정 (record 도메인) → 성공 시 메인으로 이동.
