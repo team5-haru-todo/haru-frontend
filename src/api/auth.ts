@@ -2,6 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import { router } from 'expo-router';
 import { apiClient } from './client';
+import { useTutorialStore } from '@/src/store/tutorialStore';
 
 export interface LoginResponse {
   accessToken: string;
@@ -84,6 +85,9 @@ export async function logout(): Promise<void> {
     if (Platform.OS !== 'web') {
       await SecureStore.deleteItemAsync('authToken');
     }
+    // 이전 계정의 활성 tour/미처리 completionEvent가 다음 로그인 계정으로 새어 들어가지
+    // 않게 세션 종료 시점에 명시적으로 초기화한다.
+    useTutorialStore.getState().reset();
     router.replace('/(auth)/login');
   }
 }

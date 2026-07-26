@@ -16,11 +16,17 @@ export interface UserSettingsResponse {
   timezone: string;
   // 메인 화면 알림 설정 팝업을 이 계정이 이미 봤는지 여부(pushEnabled와 별개).
   notificationPromptSeen: boolean;
+  // 계정별 메인 튜토리얼 시청 버전. 0 = 아직 안 봄. "신규 가입자인지"가 아니라
+  // "이 버전의 튜토리얼을 아직 안 봤는지"가 판단 기준이다(백엔드 UserSettingsResponse와 동일).
+  mainTutorialVersion: number;
+  mainCompletedTutorialVersion: number;
 }
 
 export interface UpdateUserSettingsRequest {
   pushEnabled?: boolean;
   notificationPromptSeen?: boolean;
+  mainTutorialVersion?: number;
+  mainCompletedTutorialVersion?: number;
 }
 
 export interface WithdrawRequest {
