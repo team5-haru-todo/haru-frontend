@@ -13,6 +13,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { mainTutorialStepConfigs } from "./tutorial/mainTutorialConfigs";
+import { useTutorialStore } from "@/src/store/tutorialStore";
+import { TutorialTargetFrame } from "@/src/components/tutorial/TutorialTargetFrame";
 import { ChooseFromMemoLink } from "./ChooseFromMemoLink";
 
 type Props = {
@@ -42,6 +45,9 @@ export function EmptyState({ onSubmit, onChooseFromMemo }: Props) {
     () => EMPTY_STATE_MESSAGES[Math.floor(Math.random() * EMPTY_STATE_MESSAGES.length)]
   );
   const hasText = inputText.trim().length > 0;
+  // index.tsx/tabs _layout.tsx와 이 값을 공유해 main-empty tour일 때만 활성화.
+  const activeTourId = useTutorialStore((s) => s.activeTourId);
+  const inputStepCfg = mainTutorialStepConfigs["main-empty-input"];
 
   return (
     <View style={styles.wrapper}>
@@ -53,17 +59,27 @@ export function EmptyState({ onSubmit, onChooseFromMemo }: Props) {
         </Text>
 
         <View style={styles.inputActionGroup}>
-          <View style={styles.inputRow}>
-            <TextInput
-              style={styles.input}
-              value={inputText}
-              onChangeText={setInputText}
-              placeholder="오늘 할 일을 적어보세요"
-              placeholderTextColor={colors.text.placeholder}
-              returnKeyType="done"
-              onSubmitEditing={() => hasText && onSubmit(inputText.trim())}
-            />
-          </View>
+          {/* 흰색 frame(사방 TARGET_FRAME_INSET)은 TutorialTargetFrame이 절대위치 배경으로
+              그린다 — 여기 style은 이 wrapper가 부모(inputActionGroup) 안에서 폭을 어떻게
+              차지할지(alignSelf)만 지정한다. inputRow의 width:'100%'가 이 wrapper 기준으로
+              계산되므로 stretch가 없으면 0폭으로 collapse된다. */}
+          <TutorialTargetFrame
+            stepConfig={inputStepCfg}
+            active={activeTourId === "main-empty"}
+            style={styles.inputTutorialFrame}
+          >
+            <View style={styles.inputRow}>
+              <TextInput
+                style={styles.input}
+                value={inputText}
+                onChangeText={setInputText}
+                placeholder="오늘 할 일을 적어보세요"
+                placeholderTextColor={colors.text.placeholder}
+                returnKeyType="done"
+                onSubmitEditing={() => hasText && onSubmit(inputText.trim())}
+              />
+            </View>
+          </TutorialTargetFrame>
 
           <TouchableOpacity
             style={[
@@ -130,6 +146,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 50,
     width: "100%",
+  },
+  // wrapper 배치값만 담는다 — 프레임의 시각적 padding/모서리는 TutorialTargetFrame 내부 고정값 사용.
+  inputTutorialFrame: {
+    alignSelf: "stretch",
   },
   inputRow: {
     flexDirection: "row",

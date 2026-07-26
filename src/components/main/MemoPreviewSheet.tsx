@@ -67,6 +67,7 @@ export default function MemoPreviewSheet({ visible, onClose, onSelect }: Props) 
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose} />
       <View style={styles.sheet}>
+        <View style={styles.sheetContent}>
         <Pressable style={styles.chevronWrapper} onPress={onClose} hitSlop={12}>
           <Ionicons name="chevron-down" size={20} color={colors.text.tertiary} />
         </Pressable>
@@ -116,6 +117,7 @@ export default function MemoPreviewSheet({ visible, onClose, onSelect }: Props) 
             </Pressable>
           </View>
         )}
+        </View>
       </View>
     </Modal>
   );
@@ -136,6 +138,15 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     overflow: 'hidden',
+  },
+  // 시트 외곽(sheet)/overlay는 전체폭 유지하고, 실제 목록·버튼 콘텐츠만
+  // 대형 화면에서 maxWidth로 제한해 중앙 정렬한다. 시트가 고정 높이(420)라
+  // 여기서는 flex:1로 그 높이를 채운다(메인 ScrollView의 mainContent와 달리 스크롤 가둠 문제 없음).
+  sheetContent: {
+    width: '100%',
+    maxWidth: 430,
+    alignSelf: 'center',
+    flex: 1,
   },
   chevronWrapper: {
     alignItems: 'center',
