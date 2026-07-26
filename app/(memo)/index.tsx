@@ -109,6 +109,7 @@ export default function MemoListScreen() {
   // 위치가 달라져서 고정값을 쓸 수 없다.
   const addButtonWrapperRef = useRef<View>(null);
   const memoSubmittingRef = useRef(false);
+  const memoInputRef = useRef<TextInput>(null);
   const editSubmittingRef = useRef(false);
   // 마지막으로 목록을 조회한 KST 날짜와, 직전 AppState (자정 롤오버 감지용)
   const lastSyncedDateRef = useRef(getKstDateKey());
@@ -208,14 +209,13 @@ export default function MemoListScreen() {
       return;
     }
 
+    // 세션당 1회 커밋: 성공 시 가드 유지(중복 blur 차단), 실패 시만 해제. 리셋은 입력창 열 때.
     memoSubmittingRef.current = true;
-    try {
-      const success = await addMemo(content);
-      if (success) {
-        setMemoText('');
-        setIsAdding(false);
-      }
-    } finally {
+    const success = await addMemo(content);
+    if (success) {
+      setMemoText('');
+      setIsAdding(false);
+    } else {
       memoSubmittingRef.current = false;
     }
   };
@@ -266,10 +266,12 @@ export default function MemoListScreen() {
 
   const renderInput = () => (
     <TextInput
+      ref={memoInputRef}
       style={styles.input}
       value={memoText}
       onChangeText={setMemoText}
-      onSubmitEditing={handleSubmitMemo}
+      // 완료키는 저장하지 않고 포커스만 뺀다 → 저장은 onBlur 한 곳으로 수렴.
+      onSubmitEditing={() => memoInputRef.current?.blur()}
       onBlur={handleSubmitMemo}
       returnKeyType="done"
       placeholder="할 일을 적어보세요"
@@ -413,7 +415,14 @@ export default function MemoListScreen() {
         <View
           ref={addButtonWrapperRef}
           style={[styles.addButtonWrapper, { paddingBottom: screenBottomInset }]}>
-          <Pressable style={styles.addButton} onPress={() => setIsAdding(true)}>
+          <Pressable
+            style={styles.addButton}
+            onPress={() => {
+              // 새 입력 세션 시작 → 세션 가드 초기화 (직전 저장으로 잠긴 상태 해제)
+              memoSubmittingRef.current = false;
+              setIsAdding(true);
+            }}
+          >
             <Ionicons name="add-circle" size={24} color={colors.primary.default} />
             <Text style={styles.addButtonLabel}>할 일 추가</Text>
           </Pressable>
