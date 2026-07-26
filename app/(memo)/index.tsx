@@ -22,6 +22,7 @@ import { setTodayTask } from '@/src/api/record';
 import type { TaskResponse } from '@/src/api/task';
 import { DeleteMemoModal } from '@/src/components/memo/DeleteMemoModal';
 import { MemoCard, type MemoCardProps } from '@/src/components/memo/MemoCard';
+import { MemoTutorialOverlay } from '@/src/components/memo/MemoTutorialOverlay';
 import { useMemos } from '@/src/hooks/useMemos';
 import { useToastStore } from '@/src/store/toastStore';
 import { colors, layout, radius, spacing, typography } from '@/src/constants';
@@ -41,6 +42,9 @@ const ADD_BUTTON_HEIGHT = 54;
 const ADD_BUTTON_VERTICAL_GAP = spacing.lg;
 const ANDROID_MIN_BOTTOM_INSET = spacing.xl;
 const LIST_BOTTOM_GAP = spacing.lg;
+
+// 개발 중 화면 확인용. 서버 판정(memoTutorialSeen)을 붙이면 제거한다.
+const FORCE_SHOW_TUTORIAL = true;
 
 // 재정렬된 플랫 리스트를 훑어, 각 메모가 현재 어느 섹션에 속하는지 계산.
 // 즐겨찾기 라벨은 리스트 밖(ListHeaderComponent) 고정이라 시작 섹션은 RECURRING,
@@ -93,6 +97,11 @@ export default function MemoListScreen() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editText, setEditText] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [tutorialVisible, setTutorialVisible] = useState(false);
+  const tutorialCheckedRef = useRef(false);
+  // 튜토리얼이 덮어야 할 목록 영역의 아래 경계. 진입 경로(탭/푸시)와 기기 inset에 따라
+  // 위치가 달라져서 고정값을 쓸 수 없다.
+  const addButtonWrapperRef = useRef<View>(null);
   const memoSubmittingRef = useRef(false);
   const editSubmittingRef = useRef(false);
   // 마지막으로 목록을 조회한 KST 날짜와, 직전 AppState (자정 롤오버 감지용)
@@ -133,6 +142,25 @@ export default function MemoListScreen() {
       subscription.remove();
     };
   }, [refreshMemos]);
+
+  // 첫 진입 튜토리얼 노출 판정. 목록 로딩이 끝난 뒤 한 번만 확인한다.
+  // TODO(HARU-60): 백엔드에 memoTutorialSeen이 올라오면
+  // getMySettings()로 조회해 값이 false일 때만 띄우도록 교체한다(undefined면 띄우지 않는다).
+  useEffect(() => {
+    if (loading || tutorialCheckedRef.current) {
+      return;
+    }
+    tutorialCheckedRef.current = true;
+    if (FORCE_SHOW_TUTORIAL) {
+      setTutorialVisible(true);
+    }
+  }, [loading]);
+
+  const handleTutorialFinish = () => {
+    setTutorialVisible(false);
+    // TODO(HARU-60): updateMySettings({ memoTutorialSeen: true })
+    // 저장에 실패해도 화면 흐름은 막지 않는다(다음 진입 때 한 번 더 뜨는 정도).
+  };
 
   // 도전 = 이 할 일을 오늘의 한 개로 설정 (record 도메인) → 성공 시 메인으로 이동.
   // 메모장은 메인에서 push되므로 back()으로 복귀하며, 메인은 focus 시 syncTodayState로
@@ -366,7 +394,9 @@ export default function MemoListScreen() {
       </View>
 
       {!loading && !(isAdding && memos.length === 0) && (
-        <View style={[styles.addButtonWrapper, { paddingBottom: screenBottomInset }]}>
+        <View
+          ref={addButtonWrapperRef}
+          style={[styles.addButtonWrapper, { paddingBottom: screenBottomInset }]}>
           <Pressable style={styles.addButton} onPress={() => setIsAdding(true)}>
             <Ionicons name="add-circle" size={24} color={colors.primary.default} />
             <Text style={styles.addButtonLabel}>할 일 추가</Text>
@@ -378,6 +408,12 @@ export default function MemoListScreen() {
         visible={pendingDeleteId !== null}
         onCancel={() => setPendingDeleteId(null)}
         onConfirm={handleConfirmDelete}
+      />
+
+      <MemoTutorialOverlay
+        visible={tutorialVisible}
+        listBottomRef={addButtonWrapperRef}
+        onFinish={handleTutorialFinish}
       />
     </View>
   );
