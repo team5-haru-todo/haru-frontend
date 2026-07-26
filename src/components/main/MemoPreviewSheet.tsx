@@ -7,19 +7,13 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import type { TaskResponse } from '@/src/api/task';
 import { useMemos } from '@/src/hooks/useMemos';
 import { colors, radius, spacing, typography } from '@/src/constants';
+import { formatRelativeDays } from '@/src/lib/date';
 
 type Props = {
   visible: boolean;
   onClose: () => void;
   onSelect: (memo: TaskResponse) => void;
 };
-
-function formatRelativeDays(createdAt: string) {
-  const createdTime = new Date(createdAt).getTime();
-  if (Number.isNaN(createdTime)) return '';
-  const days = Math.floor((Date.now() - createdTime) / (1000 * 60 * 60 * 24));
-  return days <= 0 ? '오늘' : `${days}일 전`;
-}
 
 export default function MemoPreviewSheet({ visible, onClose, onSelect }: Props) {
   const router = useRouter();
