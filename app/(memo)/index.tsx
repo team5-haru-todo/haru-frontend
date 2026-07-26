@@ -43,6 +43,9 @@ const ADD_BUTTON_HEIGHT = 54;
 const ADD_BUTTON_VERTICAL_GAP = spacing.lg;
 const ANDROID_MIN_BOTTOM_INSET = spacing.xl;
 const LIST_BOTTOM_GAP = spacing.lg;
+// 목록 영역(content)의 아래 여백. '할 일 추가' 버튼 위쪽 간격이
+// 이 값 + wrapper의 paddingTop이므로, 아래 간격을 맞출 때도 같이 쓴다.
+const CONTENT_BOTTOM_PADDING = 10;
 
 // 재정렬된 플랫 리스트를 훑어, 각 메모가 현재 어느 섹션에 속하는지 계산.
 // 즐겨찾기 라벨은 리스트 밖(ListHeaderComponent) 고정이라 시작 섹션은 RECURRING,
@@ -75,7 +78,12 @@ export default function MemoListScreen() {
   const tabBarHeight =
     layout.tabBarHeight +
     (Platform.OS === 'android' ? Math.max(deviceBottomInset - 25, 0) : 0);
-  const screenBottomInset = isMemoTab ? 0 : deviceBottomInset;
+  // 탭으로 들어오면 아래가 탭바라 홈 인디케이터 여백이 필요 없지만, 0으로 두면
+  // '할 일 추가' 버튼이 탭바에 붙는다. 버튼 위쪽 간격(content의 paddingBottom +
+  // wrapper의 paddingTop)과 같은 값을 줘서 위아래를 맞춘다.
+  const screenBottomInset = isMemoTab
+    ? CONTENT_BOTTOM_PADDING + spacing.lg
+    : deviceBottomInset;
   const listBottomPadding =
     ADD_BUTTON_HEIGHT + ADD_BUTTON_VERTICAL_GAP + screenBottomInset + LIST_BOTTOM_GAP;
   const {
@@ -454,7 +462,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingTop: 16,
-    paddingBottom: 10,
+    paddingBottom: CONTENT_BOTTOM_PADDING,
     paddingHorizontal: 10,
   },
   emptyState: {
