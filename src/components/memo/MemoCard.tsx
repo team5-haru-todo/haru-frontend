@@ -5,19 +5,11 @@ import { Swipeable } from 'react-native-gesture-handler';
 
 import type { TaskResponse } from '@/src/api/task';
 import { colors, layout, radius, typography } from '@/src/constants';
+import { formatRelativeDays } from '@/src/lib/date';
 
 const pinIcon = require('@/assets/images/memo/pin-icon.png');
 const pinFilledIcon = require('@/assets/images/memo/pin-filled-icon.png');
 const trashIcon = require('@/assets/images/memo/trash-icon.png');
-
-function formatRelativeDays(createdAt: string) {
-  const createdTime = new Date(createdAt).getTime();
-  if (Number.isNaN(createdTime)) {
-    return '';
-  }
-  const days = Math.floor((Date.now() - createdTime) / (1000 * 60 * 60 * 24));
-  return days <= 0 ? '오늘' : `${days}일 전`;
-}
 
 export type MemoCardProps = {
   memo: TaskResponse;
@@ -101,7 +93,7 @@ export function MemoCard({
           style={[styles.challengeButton, isChallengeDisabled && styles.challengeButtonDisabled]}
           onPress={() => onChallenge(memo)}
           disabled={isChallengeDisabled}>
-          <Text style={styles.challengeButtonLabel}>도전</Text>
+          <Text style={styles.challengeButtonLabel}>시작</Text>
         </Pressable>
       </Pressable>
     </Swipeable>
@@ -118,9 +110,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface.default,
     paddingHorizontal: 16,
     paddingVertical: 0,
-    ...typography.b3BodyRegular,
+    // lineHeight를 명시하면 iOS에서 캐럿은 fontSize(16) 기준으로 그려지는데 글자는
+    // lineHeight(24) 줄 안에 배치돼 서로 어긋난다(텍스트가 아래로 처져 보임).
+    // lineHeight는 빼고 폰트의 자연스러운 줄 높이를 쓰되, 세로 공간은 height로 유지한다.
+    fontFamily: typography.b3BodyRegular.fontFamily,
+    fontSize: typography.b3BodyRegular.fontSize,
+    letterSpacing: typography.b3BodyRegular.letterSpacing,
     color: colors.text.primary,
-    textAlignVertical: 'center',
+    textAlignVertical: 'center', // Android 전용: 텍스트 세로 중앙
+    includeFontPadding: false, // Android 전용: 폰트 여분 패딩 제거
   },
   memoCard: {
     width: '100%',

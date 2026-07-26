@@ -3,12 +3,12 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { HomeIndicatorSpacer } from '../../src/components/common/HomeIndicatorSpacer';
 import { AlreadyLinkedDialog } from '../../src/components/common/AlreadyLinkedDialog';
 import { useTerms } from '../../src/context/TermsContext';
-import { linkApple, linkKakao, loginWithApple, loginWithKakao } from '@/src/api/auth';
+import { linkApple, linkKakao, loginAsGuest, loginWithApple, loginWithKakao } from '@/src/api/auth';
 import { useUserStore } from '@/src/store/userStore';
 
 const ICON_ARROW_LEFT = require('../../assets/images/Icon/Arrow_left.png');
@@ -21,22 +21,27 @@ const ICON_ARROW_RIGHT = require('../../assets/images/Icon/Arrow_Right_xs.png');
 // TODO: 약관 버전 관리 정책(서버/노션 등) 확정 전까지 임시 고정값 사용
 const TERMS_VERSION = 'v1.0';
 
-const TERMS: { id: number; key: 'service' | 'privacy' | 'marketing'; label: string; route: string }[] = [
-  { id: 1, key: 'service', label: '(필수) 서비스 이용약관', route: '/terms/service' },
-  { id: 2, key: 'privacy', label: '(필수) 개인정보처리방침', route: '/terms/privacy' },
-  { id: 3, key: 'marketing', label: '마케팅 수신 동의', route: '/terms/marketing' },
+type TermsKey = 'service' | 'privacy' | 'marketing' | 'age';
+
+const TERMS: { id: number; key: TermsKey; label: string; route?: string }[] = [
+  // 상세 약관 문서가 없는 자기 신고형 체크박스 — route 없음, 탭하면 바로 토글된다.
+  { id: 1, key: 'age', label: '(필수) 만 14세 이상입니다' },
+  { id: 2, key: 'service', label: '(필수) 서비스 이용약관', route: '/terms/service' },
+  { id: 3, key: 'privacy', label: '(필수) 개인정보처리방침', route: '/terms/privacy' },
+  { id: 4, key: 'marketing', label: '(선택) 마케팅 수신 동의', route: '/terms/marketing' },
 ];
 
 export default function TermsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { agreed, allChecked, requiredChecked, toggleAll } = useTerms();
+  const { agreed, allChecked, requiredChecked, toggleAll, setAgreed } = useTerms();
   const fetchUser = useUserStore((state) => state.fetchUser);
+  const currentUser = useUserStore((state) => state.user);
   const [submitting, setSubmitting] = useState(false);
   const [alreadyLinkedVisible, setAlreadyLinkedVisible] = useState(false);
 
-  // login.tsx(신규 가입) 또는 account-management.tsx(게스트 계정 연동)에서
-  // 이 화면으로 넘어올 때 함께 전달된 정보. mode로 두 경로를 구분한다.
+  // login.tsx(신규 가입/게스트) 또는 account-management.tsx(게스트 계정 연동)에서
+  // 이 화면으로 넘어올 때 함께 전달된 정보. mode/provider로 세 경로를 구분한다.
   const { provider, kakaoAccessToken, appleIdentityToken, mode } = useLocalSearchParams<{
     provider?: string;
     kakaoAccessToken?: string;
@@ -45,6 +50,19 @@ export default function TermsScreen() {
   }>();
 
   const isLinkMode = mode === 'link';
+  const isGuestMode = provider === 'guest';
+
+  // 연동(link) 모드일 때, 게스트로 있을 때 이미 같은 버전 약관에 동의한 이력이 있으면
+  // 처음부터 다시 다 체크하게 하지 않고 자동으로 체크된 상태로 보여준다.
+  // (단, 동의 이력 자체는 연동 시점에 다시 기록된다 — 실명 연동으로 처리 성격이 바뀌기 때문)
+  useEffect(() => {
+    if (isLinkMode && currentUser?.termsVersion === TERMS_VERSION) {
+      setAgreed('service', true);
+      setAgreed('privacy', true);
+      setAgreed('marketing', true);
+      setAgreed('age', true);
+    }
+  }, [isLinkMode, currentUser?.termsVersion]);
 
   const handleBack = () => {
     router.back();
@@ -55,6 +73,17 @@ export default function TermsScreen() {
     setSubmitting(true);
     try {
       const agreedAt = new Date().toISOString();
+
+      if (isGuestMode) {
+        // 게스트 최초 진입 — 약관 동의 후 게스트 계정 생성
+        const { accessToken, user } = await loginAsGuest({ termsVersion: TERMS_VERSION, agreedAt });
+        if (Platform.OS !== 'web') {
+          await SecureStore.setItemAsync('authToken', accessToken);
+        }
+        await fetchUser();
+        router.replace(user.hasSeenOnboarding ? '/(tabs)' : '/(tutorial)');
+        return;
+      }
 
       if (isLinkMode) {
         // 게스트 계정에 소셜 계정 연동
@@ -164,19 +193,30 @@ export default function TermsScreen() {
 
           <View>
             {TERMS.map((term) => (
-              <TouchableOpacity
-                key={term.id}
-                style={styles.termItem}
-                activeOpacity={0.7}
-                onPress={() => router.push(term.route as any)}
-              >
-                <Image
-                  source={agreed[term.key] ? ICON_CHECK_LINE_ON : ICON_CHECK_LINE_OFF}
-                  style={styles.termIcon}
-                />
-                <Text style={styles.termLabel}>{term.label}</Text>
-                <Image source={ICON_ARROW_RIGHT} style={styles.termIcon} />
-              </TouchableOpacity>
+              <View key={term.id} style={styles.termItem}>
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => setAgreed(term.key, !agreed[term.key])}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Image
+                    source={agreed[term.key] ? ICON_CHECK_LINE_ON : ICON_CHECK_LINE_OFF}
+                    style={styles.termIcon}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.termLabelArea}
+                  activeOpacity={0.7}
+                  onPress={() =>
+                    term.route
+                      ? router.push(term.route as any)
+                      : setAgreed(term.key, !agreed[term.key])
+                  }
+                >
+                  <Text style={styles.termLabel}>{term.label}</Text>
+                  {term.route && <Image source={ICON_ARROW_RIGHT} style={styles.termIcon} />}
+                </TouchableOpacity>
+              </View>
             ))}
           </View>
         </View>
@@ -261,6 +301,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   termIcon: { width: 24, height: 24, resizeMode: 'contain' },
+  termLabelArea: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   termLabel: { ...typography.b3BodyRegular, color: colors.text.primary, flex: 1 },
 
   btnAgree: {

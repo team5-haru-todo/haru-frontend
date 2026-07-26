@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { colors } from '@/src/constants/colors';
 import { typography } from '@/src/constants/typography';
 import { spacing, radius } from '@/src/constants/layout';
+import { InProgressBadge } from './InProgressBadge';
 
 type Props = {
   content: string;
@@ -17,7 +18,7 @@ export function TodayTaskCard({ content, isEditing, onPressEdit, onChangeText, o
   return (
     <View style={styles.card}>
       <View style={styles.labelBlock}>
-        <Text style={styles.label}>오늘의 한개</Text>
+        <InProgressBadge />
       </View>
 
       {isEditing ? (
@@ -40,7 +41,18 @@ export function TodayTaskCard({ content, isEditing, onPressEdit, onChangeText, o
           <TouchableOpacity onPress={onPressEdit} activeOpacity={0.7}>
             <Text style={styles.content}>{content}</Text>
           </TouchableOpacity>
-          <Text style={styles.hint}>텍스트를 누르면 수정할 수 있어요</Text>
+          <TouchableOpacity
+            style={styles.editHint}
+            onPress={onPressEdit}
+            activeOpacity={0.7}
+          >
+            <Image
+              source={require('../../../assets/images/Edit_ic.png')}
+              style={styles.editHintIcon}
+              resizeMode="contain"
+            />
+            <Text style={styles.editHintText}>수정</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -71,17 +83,12 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
     minHeight: 350,
   },
-  // Figma "오늘의 한개" 영역 44 hug — 텍스트 lineHeight를 억지로 키우지 않고 wrapper 높이로 확보
+  // Figma 상태 배지 영역 44 hug — 배지(높이 34)를 세로 중앙에 담는다.
   labelBlock: {
     width: '100%',
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  label: {
-    ...typography.b2BodyBold,
-    color: colors.text.tertiary,
-    textAlign: 'center',
   },
   // Figma InputField_Today 104 hug — 투두 텍스트 길이가 가변적이라 height 대신 minHeight로 잘림 방지
   displayBox: {
@@ -118,10 +125,25 @@ const styles = StyleSheet.create({
     height: 24,
     padding: 0,
   },
-  hint: {
-    ...typography.c2CaptionXSm,
-    fontFamily: 'Pretendard-Regular',
+  // Figma 수정 안내 영역 52×24 — 아이콘(20)+gap(4)+텍스트(28) = 52. 전체가 터치 영역.
+  editHint: {
+    width: 52,
+    height: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  editHintIcon: {
+    width: 20,
+    height: 20,
+    tintColor: colors.text.placeholder,
+  },
+  editHintText: {
+    ...typography.b2BodyMedium,
     color: colors.text.placeholder,
+    width: 28,
+    height: 24,
     textAlign: 'center',
   },
 });

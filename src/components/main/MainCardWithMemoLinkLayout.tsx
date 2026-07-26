@@ -6,21 +6,32 @@ import { ChooseFromMemoLink } from "./ChooseFromMemoLink";
 type Props = {
   children: ReactNode;
   onChoosePress: () => void;
+  // ⚠️ [임시 계측 — SCR-003 카드 하향 이동 진단용. 확인 후 제거] cardStage의 y/height 측정.
+  onStageLayout?: (y: number, h: number) => void;
 };
 
-// empty(EmptyState)/selected(TodayTaskCard) 화면이 공유하는 카드 배치 규칙.
-// cardAnchor는 position:'relative'라서 자신의 높이를 절대 위치 자식(memoLinkSlot)을 제외한
-// 일반 흐름 자식(카드)만으로 결정한다. 그 덕분에 cardStage의 justifyContent:'center'는
-// 오직 카드 높이만 기준으로 중앙 정렬되고, 버튼(gap+ChooseFromMemoLink)은 그 계산에 관여하지
-// 않은 채 카드 바로 아래 spacing.xl 간격으로만 시각적으로 붙는다.
-export function MainCardWithMemoLinkLayout({ children, onChoosePress }: Props) {
+// selected(TodayTaskCard) 화면의 카드 배치 규칙.
+// 카드 + "메모장에서 고르기" 링크를 일반 세로 흐름으로 묶어(cardStage gap) 함께 중앙 정렬한다.
+// (이전에는 memoLinkSlot이 position:'absolute'라 중앙정렬 계산에서 링크(24)+간격(20)이 빠져,
+//  같은 카드를 일반 흐름으로 배치하는 EmptyState보다 카드가 약 22px 아래로 보였다 — 그 비대칭을 제거.)
+export function MainCardWithMemoLinkLayout({ children, onChoosePress, onStageLayout }: Props) {
   return (
-    <View style={styles.cardStage}>
-      <View style={styles.cardAnchor}>
-        {children}
-        <View style={styles.memoLinkSlot}>
-          <ChooseFromMemoLink onPress={onChoosePress} />
-        </View>
+    <View
+      style={styles.cardStage}
+      onLayout={
+        onStageLayout
+          ? (e) =>
+              onStageLayout(
+                Math.round(e.nativeEvent.layout.y * 10) / 10,
+                Math.round(e.nativeEvent.layout.height * 10) / 10,
+              )
+          : undefined
+      } /* ⚠️ [임시 계측] */
+    >
+      <View style={styles.cardAnchor}>{children}</View>
+
+      <View style={styles.memoLinkSlot}>
+        <ChooseFromMemoLink onPress={onChoosePress} />
       </View>
     </View>
   );
@@ -28,21 +39,16 @@ export function MainCardWithMemoLinkLayout({ children, onChoosePress }: Props) {
 
 const styles = StyleSheet.create({
   cardStage: {
-    flex: 1,
     width: "100%",
     justifyContent: "center",
     alignItems: "center",
+    // 카드 ↔ 링크 간격 20(기존 memoLinkSlot marginTop과 동일).
+    gap: spacing.xl,
   },
   cardAnchor: {
-    position: "relative",
     width: "100%",
   },
   memoLinkSlot: {
-    position: "absolute",
-    top: "100%",
-    left: 0,
-    right: 0,
-    marginTop: spacing.xl,
     alignItems: "center",
   },
 });

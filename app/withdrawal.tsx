@@ -18,6 +18,7 @@ import { StatusBarSpacer } from '@/src/components/common/StatusBarSpacer';
 import { HomeIndicatorSpacer } from '@/src/components/common/HomeIndicatorSpacer';
 import { ConfirmDialog } from '@/src/components/common/ConfirmDialog';
 import { withdraw } from '@/src/api/user';
+import { useTutorialStore } from '@/src/store/tutorialStore';
 
 const ICON_ARROW_LEFT = require('../assets/images/Icon/Arrow_left.png');
 const ICON_CHECKBOX_CHECKED = require('../assets/images/Ic_Checkboxe.png');
@@ -92,6 +93,9 @@ export default function WithdrawalScreen() {
     if (Platform.OS !== 'web') {
       await SecureStore.deleteItemAsync('authToken');
     }
+    // 탈퇴 계정의 활성 tour/미처리 completionEvent가 다음 로그인 계정으로 새어 들어가지
+    // 않게 세션 종료 시점에 명시적으로 초기화한다.
+    useTutorialStore.getState().reset();
     router.replace('/(auth)/login');
   };
 

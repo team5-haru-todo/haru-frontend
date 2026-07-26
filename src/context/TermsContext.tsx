@@ -1,11 +1,12 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
 
-type TermsKey = 'service' | 'privacy' | 'marketing';
+type TermsKey = 'service' | 'privacy' | 'marketing' | 'age';
 
 type TermsState = {
   service: boolean;
   privacy: boolean;
   marketing: boolean;
+  age: boolean;
 };
 
 type TermsContextType = {
@@ -23,18 +24,20 @@ export function TermsProvider({ children }: { children: ReactNode }) {
     service: false,
     privacy: false,
     marketing: false,
+    age: false,
   });
 
   const setAgreed = (key: TermsKey, value: boolean) => {
     setState((prev) => ({ ...prev, [key]: value }));
   };
 
-  const allChecked = state.service && state.privacy && state.marketing;
-  const requiredChecked = state.service && state.privacy;
+  const allChecked = state.service && state.privacy && state.marketing && state.age;
+  // 마케팅 수신 동의는 선택 항목이라 필수 체크에서 제외한다.
+  const requiredChecked = state.service && state.privacy && state.age;
 
   const toggleAll = () => {
     const next = !allChecked;
-    setState({ service: next, privacy: next, marketing: next });
+    setState({ service: next, privacy: next, marketing: next, age: next });
   };
 
   return (

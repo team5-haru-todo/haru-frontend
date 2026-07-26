@@ -1,4 +1,5 @@
 import { colors } from "@/src/constants/colors";
+import { getCompletionMessage } from "@/src/constants/completionMessages";
 import { spacing } from "@/src/constants/layout";
 import { typography } from "@/src/constants/typography";
 import LottieView from "lottie-react-native";
@@ -12,6 +13,8 @@ type Props = {
   streakCount: number;
   todayDayIndex: number;
   completedDays: boolean[];
+  // 오늘 완료한 할 일의 누적 개수 — 완료 문구를 개수별로 동적 생성하는 데 쓴다.
+  completedCount: number;
   onShare: () => void;
   onConfirm: () => void;
 };
@@ -20,6 +23,7 @@ export function CompletionCelebration({
   streakCount,
   todayDayIndex,
   completedDays,
+  completedCount,
   onShare,
   onConfirm,
 }: Props) {
@@ -72,7 +76,7 @@ export function CompletionCelebration({
           resizeMode="cover"
         />
 
-        <Text style={styles.title}>오늘 한 개 완료!</Text>
+        <Text style={styles.title}>{getCompletionMessage(completedCount)}</Text>
 
         <View style={styles.resultCard}>
           {/* Check_JSON: check.json 캔버스(1920x1920) 안에서 실제 체크 배지는 지름 약 693px짜리
@@ -162,6 +166,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xxl,
     paddingVertical: spacing.xxxl + spacing.sm,
     width: "100%",
+    // 대형 화면에서 실제 콘텐츠(체크/배지)가 화면 전체폭으로 벌어지지 않도록 제한.
+    // confetti(전체폭 애니메이션)는 contentArea에 그대로 두어 영향받지 않는다.
+    maxWidth: 430,
   },
   checkLottie: {
     width: 124,
@@ -174,6 +181,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: spacing.xl,
     width: "100%",
+    maxWidth: 430,
+    alignSelf: "center",
   },
   shareButton: {
     flexDirection: "row",
@@ -199,6 +208,8 @@ const styles = StyleSheet.create({
   },
   confirmWrapper: {
     width: "100%",
+    maxWidth: 430,
+    alignSelf: "center",
     paddingHorizontal: spacing.xl,
   },
   confirmButton: {

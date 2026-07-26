@@ -7,19 +7,13 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import type { TaskResponse } from '@/src/api/task';
 import { useMemos } from '@/src/hooks/useMemos';
 import { colors, radius, spacing, typography } from '@/src/constants';
+import { formatRelativeDays } from '@/src/lib/date';
 
 type Props = {
   visible: boolean;
   onClose: () => void;
   onSelect: (memo: TaskResponse) => void;
 };
-
-function formatRelativeDays(createdAt: string) {
-  const createdTime = new Date(createdAt).getTime();
-  if (Number.isNaN(createdTime)) return '';
-  const days = Math.floor((Date.now() - createdTime) / (1000 * 60 * 60 * 24));
-  return days <= 0 ? '오늘' : `${days}일 전`;
-}
 
 export default function MemoPreviewSheet({ visible, onClose, onSelect }: Props) {
   const router = useRouter();
@@ -63,7 +57,7 @@ export default function MemoPreviewSheet({ visible, onClose, onSelect }: Props) 
           <Text style={styles.memoCardTime}>{formatRelativeDays(memo.createdAt)}</Text>
         </View>
         <View style={[styles.challengeButton, isDone && styles.challengeButtonDisabled]}>
-          <Text style={styles.challengeButtonLabel}>도전</Text>
+          <Text style={styles.challengeButtonLabel}>시작</Text>
         </View>
       </Pressable>
     );
@@ -73,6 +67,7 @@ export default function MemoPreviewSheet({ visible, onClose, onSelect }: Props) 
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose} />
       <View style={styles.sheet}>
+        <View style={styles.sheetContent}>
         <Pressable style={styles.chevronWrapper} onPress={onClose} hitSlop={12}>
           <Ionicons name="chevron-down" size={20} color={colors.text.tertiary} />
         </Pressable>
@@ -83,7 +78,7 @@ export default function MemoPreviewSheet({ visible, onClose, onSelect }: Props) 
           <View style={styles.contentBg}>
             <View style={styles.emptyState}>
               <Text style={styles.emptyText}>
-                아직 적어둔 할 일이 없어요{'\n'}편하게 적어두고 나중에 꺼내 보세요 🌱
+                여러 개의 할 일을 저장하고{'\n'}원하는 한 개를 선택해 시작해보세요
               </Text>
             </View>
             <Pressable
@@ -122,6 +117,7 @@ export default function MemoPreviewSheet({ visible, onClose, onSelect }: Props) 
             </Pressable>
           </View>
         )}
+        </View>
       </View>
     </Modal>
   );
@@ -142,6 +138,15 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     overflow: 'hidden',
+  },
+  // 시트 외곽(sheet)/overlay는 전체폭 유지하고, 실제 목록·버튼 콘텐츠만
+  // 대형 화면에서 maxWidth로 제한해 중앙 정렬한다. 시트가 고정 높이(420)라
+  // 여기서는 flex:1로 그 높이를 채운다(메인 ScrollView의 mainContent와 달리 스크롤 가둠 문제 없음).
+  sheetContent: {
+    width: '100%',
+    maxWidth: 430,
+    alignSelf: 'center',
+    flex: 1,
   },
   chevronWrapper: {
     alignItems: 'center',
