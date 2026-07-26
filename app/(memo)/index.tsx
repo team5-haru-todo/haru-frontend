@@ -386,7 +386,7 @@ export default function MemoListScreen() {
             <Text style={styles.emptyText}>
               {error
                 ? '메모를 불러오지 못했어요'
-                : '아직 적어둔 할 일이 없어요\n편하게 적어두고 나중에 꺼내 보세요 🌱'}
+                : '여러 개의 할 일을 저장하고\n원하는 한 개를 선택해 시작해보세요'}
             </Text>
           </View>
         ) : (
