@@ -26,7 +26,7 @@ import { logEvent } from '@/src/lib/analytics';
  */
 
 // 피그마 Tutorial_Memo_Step1/Step2 (390x844 기준)에서 가져온 값.
-const DIM_COLOR = 'rgba(20, 23, 28, 0.65)';
+const DIM_COLOR = 'rgba(21, 23, 28, 0.65)';
 const HOLE_PADDING = 8; // 강조 대상 둘레 여백 — 두 스텝 공통
 const HOLE_BORDER_WIDTH = 2; // 2스텝 Highlight_Border
 
