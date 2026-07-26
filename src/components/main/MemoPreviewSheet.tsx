@@ -57,7 +57,7 @@ export default function MemoPreviewSheet({ visible, onClose, onSelect }: Props) 
           <Text style={styles.memoCardTime}>{formatRelativeDays(memo.createdAt)}</Text>
         </View>
         <View style={[styles.challengeButton, isDone && styles.challengeButtonDisabled]}>
-          <Text style={styles.challengeButtonLabel}>도전</Text>
+          <Text style={styles.challengeButtonLabel}>시작</Text>
         </View>
       </Pressable>
     );

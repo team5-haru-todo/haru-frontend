@@ -93,7 +93,7 @@ export function MemoCard({
           style={[styles.challengeButton, isChallengeDisabled && styles.challengeButtonDisabled]}
           onPress={() => onChallenge(memo)}
           disabled={isChallengeDisabled}>
-          <Text style={styles.challengeButtonLabel}>도전</Text>
+          <Text style={styles.challengeButtonLabel}>시작</Text>
         </Pressable>
       </Pressable>
     </Swipeable>
