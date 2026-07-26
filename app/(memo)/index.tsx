@@ -20,8 +20,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { setTodayTask } from '@/src/api/record';
 import type { TaskResponse } from '@/src/api/task';
+import { getMySettings, updateMySettings } from '@/src/api/user';
 import { DeleteMemoModal } from '@/src/components/memo/DeleteMemoModal';
 import { MemoCard, type MemoCardProps } from '@/src/components/memo/MemoCard';
+import { MemoTutorialOverlay } from '@/src/components/memo/MemoTutorialOverlay';
 import { useMemos } from '@/src/hooks/useMemos';
 import { useToastStore } from '@/src/store/toastStore';
 import { colors, layout, radius, spacing, typography } from '@/src/constants';
@@ -41,6 +43,9 @@ const ADD_BUTTON_HEIGHT = 54;
 const ADD_BUTTON_VERTICAL_GAP = spacing.lg;
 const ANDROID_MIN_BOTTOM_INSET = spacing.xl;
 const LIST_BOTTOM_GAP = spacing.lg;
+// 목록 영역(content)의 아래 여백. '할 일 추가' 버튼 위쪽 간격이
+// 이 값 + wrapper의 paddingTop이므로, 아래 간격을 맞출 때도 같이 쓴다.
+const CONTENT_BOTTOM_PADDING = 10;
 
 // 재정렬된 플랫 리스트를 훑어, 각 메모가 현재 어느 섹션에 속하는지 계산.
 // 즐겨찾기 라벨은 리스트 밖(ListHeaderComponent) 고정이라 시작 섹션은 RECURRING,
@@ -73,7 +78,12 @@ export default function MemoListScreen() {
   const tabBarHeight =
     layout.tabBarHeight +
     (Platform.OS === 'android' ? Math.max(deviceBottomInset - 25, 0) : 0);
-  const screenBottomInset = isMemoTab ? 0 : deviceBottomInset;
+  // 탭으로 들어오면 아래가 탭바라 홈 인디케이터 여백이 필요 없지만, 0으로 두면
+  // '할 일 추가' 버튼이 탭바에 붙는다. 버튼 위쪽 간격(content의 paddingBottom +
+  // wrapper의 paddingTop)과 같은 값을 줘서 위아래를 맞춘다.
+  const screenBottomInset = isMemoTab
+    ? CONTENT_BOTTOM_PADDING + spacing.lg
+    : deviceBottomInset;
   const listBottomPadding =
     ADD_BUTTON_HEIGHT + ADD_BUTTON_VERTICAL_GAP + screenBottomInset + LIST_BOTTOM_GAP;
   const {
@@ -93,6 +103,11 @@ export default function MemoListScreen() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editText, setEditText] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [tutorialVisible, setTutorialVisible] = useState(false);
+  const tutorialCheckedRef = useRef(false);
+  // 튜토리얼이 덮어야 할 목록 영역의 아래 경계. 진입 경로(탭/푸시)와 기기 inset에 따라
+  // 위치가 달라져서 고정값을 쓸 수 없다.
+  const addButtonWrapperRef = useRef<View>(null);
   const memoSubmittingRef = useRef(false);
   const editSubmittingRef = useRef(false);
   // 마지막으로 목록을 조회한 KST 날짜와, 직전 AppState (자정 롤오버 감지용)
@@ -133,6 +148,35 @@ export default function MemoListScreen() {
       subscription.remove();
     };
   }, [refreshMemos]);
+
+  // 첫 진입 튜토리얼 노출 판정. 목록 로딩이 끝난 뒤 한 번만 확인한다.
+  // 값이 명시적으로 false일 때만 띄운다 — 서버에 필드가 아직 없으면(배포 순서가 어긋난 경우)
+  // undefined가 오는데, 그때 노출해버리면 이미 본 사람에게까지 뜨기 때문이다.
+  useEffect(() => {
+    if (loading || tutorialCheckedRef.current) {
+      return;
+    }
+    tutorialCheckedRef.current = true;
+    getMySettings()
+      .then((settings) => {
+        if (settings.memoTutorialSeen === false) {
+          setTutorialVisible(true);
+        }
+      })
+      .catch((settingsError) => {
+        console.error('메모 튜토리얼 노출 여부 조회 실패:', settingsError);
+      });
+  }, [loading]);
+
+  const handleTutorialFinish = async () => {
+    setTutorialVisible(false);
+    try {
+      await updateMySettings({ memoTutorialSeen: true });
+    } catch (error) {
+      // 저장에 실패해도 화면 흐름은 막지 않는다 (다음 진입 때 한 번 더 뜨는 정도).
+      console.error('메모 튜토리얼 완료 저장 실패:', error);
+    }
+  };
 
   // 도전 = 이 할 일을 오늘의 한 개로 설정 (record 도메인) → 성공 시 메인으로 이동.
   // 메모장은 메인에서 push되므로 back()으로 복귀하며, 메인은 focus 시 syncTodayState로
@@ -342,7 +386,7 @@ export default function MemoListScreen() {
             <Text style={styles.emptyText}>
               {error
                 ? '메모를 불러오지 못했어요'
-                : '아직 적어둔 할 일이 없어요\n편하게 적어두고 나중에 꺼내 보세요 🌱'}
+                : '여러 개의 할 일을 저장하고\n원하는 한 개를 선택해 시작해보세요'}
             </Text>
           </View>
         ) : (
@@ -366,7 +410,9 @@ export default function MemoListScreen() {
       </View>
 
       {!loading && !(isAdding && memos.length === 0) && (
-        <View style={[styles.addButtonWrapper, { paddingBottom: screenBottomInset }]}>
+        <View
+          ref={addButtonWrapperRef}
+          style={[styles.addButtonWrapper, { paddingBottom: screenBottomInset }]}>
           <Pressable style={styles.addButton} onPress={() => setIsAdding(true)}>
             <Ionicons name="add-circle" size={24} color={colors.primary.default} />
             <Text style={styles.addButtonLabel}>할 일 추가</Text>
@@ -378,6 +424,12 @@ export default function MemoListScreen() {
         visible={pendingDeleteId !== null}
         onCancel={() => setPendingDeleteId(null)}
         onConfirm={handleConfirmDelete}
+      />
+
+      <MemoTutorialOverlay
+        visible={tutorialVisible}
+        listBottomRef={addButtonWrapperRef}
+        onFinish={handleTutorialFinish}
       />
     </View>
   );
@@ -410,7 +462,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingTop: 16,
-    paddingBottom: 10,
+    paddingBottom: CONTENT_BOTTOM_PADDING,
     paddingHorizontal: 10,
   },
   emptyState: {

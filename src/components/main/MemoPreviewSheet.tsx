@@ -57,7 +57,7 @@ export default function MemoPreviewSheet({ visible, onClose, onSelect }: Props) 
           <Text style={styles.memoCardTime}>{formatRelativeDays(memo.createdAt)}</Text>
         </View>
         <View style={[styles.challengeButton, isDone && styles.challengeButtonDisabled]}>
-          <Text style={styles.challengeButtonLabel}>도전</Text>
+          <Text style={styles.challengeButtonLabel}>시작</Text>
         </View>
       </Pressable>
     );
@@ -78,7 +78,7 @@ export default function MemoPreviewSheet({ visible, onClose, onSelect }: Props) 
           <View style={styles.contentBg}>
             <View style={styles.emptyState}>
               <Text style={styles.emptyText}>
-                아직 적어둔 할 일이 없어요{'\n'}편하게 적어두고 나중에 꺼내 보세요 🌱
+                여러 개의 할 일을 저장하고{'\n'}원하는 한 개를 선택해 시작해보세요
               </Text>
             </View>
             <Pressable
