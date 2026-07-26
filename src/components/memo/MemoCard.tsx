@@ -5,19 +5,11 @@ import { Swipeable } from 'react-native-gesture-handler';
 
 import type { TaskResponse } from '@/src/api/task';
 import { colors, layout, radius, typography } from '@/src/constants';
+import { formatRelativeDays } from '@/src/lib/date';
 
 const pinIcon = require('@/assets/images/memo/pin-icon.png');
 const pinFilledIcon = require('@/assets/images/memo/pin-filled-icon.png');
 const trashIcon = require('@/assets/images/memo/trash-icon.png');
-
-function formatRelativeDays(createdAt: string) {
-  const createdTime = new Date(createdAt).getTime();
-  if (Number.isNaN(createdTime)) {
-    return '';
-  }
-  const days = Math.floor((Date.now() - createdTime) / (1000 * 60 * 60 * 24));
-  return days <= 0 ? '오늘' : `${days}일 전`;
-}
 
 export type MemoCardProps = {
   memo: TaskResponse;
