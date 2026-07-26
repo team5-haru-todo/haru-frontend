@@ -1,5 +1,14 @@
-import { useEffect, useState } from 'react';
-import { Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import {
+  Dimensions,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,6 +25,7 @@ const TOTAL_PAGES = 2;
 export default function TutorialScreen() {
   const insets = useSafeAreaInsets();
   const [activeIndex, setActiveIndex] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
   const statusBarHeight = Math.max(insets.top, 54);
 
   useEffect(() => {
@@ -35,26 +45,50 @@ export default function TutorialScreen() {
     router.replace('/(tabs)');
   };
 
+  // 버튼으로 페이지를 넘길 때도 스크롤 위치를 함께 맞춰서, 스와이프로 되돌아갔을 때와
+  // 상태가 어긋나지 않도록 한다.
+  const goToPage = (index: number) => {
+    scrollRef.current?.scrollTo({ x: index * SCREEN_WIDTH, animated: true });
+    setActiveIndex(index);
+  };
+
   const handleNext = () => {
     if (activeIndex < TOTAL_PAGES - 1) {
-      setActiveIndex((prev) => prev + 1);
+      goToPage(activeIndex + 1);
     } else {
       handleFinish('finished');
     }
   };
 
-  const handleSkip = () => {
-    handleFinish('skipped');
+  // 손가락 스와이프로 페이지가 바뀌었을 때(버튼이 아니라) activeIndex를 동기화한다.
+  const handleMomentumScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const newIndex = Math.round(event.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+    if (newIndex !== activeIndex) {
+      setActiveIndex(newIndex);
+    }
   };
 
-  const content = (
-    <>
+  return (
+    <LinearGradient
+      colors={['#FFFFFF', colors.primary.light]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 0.96 }}
+      style={styles.contentArea}
+    >
       <View style={{ height: statusBarHeight }} />
 
-      <View style={styles.pageArea}>
-        {activeIndex === 0 && <TutorialPage1 isActive={activeIndex === 0} />}
-        {activeIndex === 1 && <TutorialPage2 isActive={activeIndex === 1} />}
-      </View>
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={handleMomentumScrollEnd}
+        scrollEventThrottle={16}
+        style={styles.pageArea}
+      >
+        <TutorialPage1 isActive={activeIndex === 0} />
+        <TutorialPage2 isActive={activeIndex === 1} />
+      </ScrollView>
 
       <View style={styles.bottomArea}>
         <View style={styles.dots}>
@@ -70,31 +104,11 @@ export default function TutorialScreen() {
             {activeIndex === TOTAL_PAGES - 1 ? '시작하기' : '다음'}
           </Text>
         </TouchableOpacity>
-
-        {/* 건너뛰기 - 게스트 로그인 버튼과 동일한 패턴 */}
-        <TouchableOpacity style={styles.skipButton} activeOpacity={0.7} onPress={handleSkip}>
-          <Text style={styles.skipText}>건너뛰기</Text>
-        </TouchableOpacity>
       </View>
 
       <HomeIndicatorSpacer />
-    </>
+    </LinearGradient>
   );
-
-  if (activeIndex === 0) {
-    return (
-      <LinearGradient
-        colors={['#FFFFFF', colors.primary.light]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0.96 }}
-        style={styles.contentArea}
-      >
-        {content}
-      </LinearGradient>
-    );
-  }
-
-  return <View style={[styles.contentArea, { backgroundColor: '#FFFFFF' }]}>{content}</View>;
 }
 
 const styles = StyleSheet.create({
@@ -137,13 +151,4 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   btnNextText: { ...typography.b2BodyBold, color: '#FFFFFF' },
-
-  skipButton: {
-    padding: 8,
-  },
-  skipText: {
-    ...typography.b4BodySm,
-    color: colors.text.tertiary,
-    textDecorationLine: 'underline',
-  },
 });
