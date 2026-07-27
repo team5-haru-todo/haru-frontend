@@ -42,8 +42,8 @@ export type TutorialTooltipShellProps = {
   primaryAction: TutorialAction;
 };
 
-// POC 범위: main-empty / main-completed. 다른 도메인 tour가 생기면 여기 확장한다.
-export type TutorialTourId = "main-empty" | "main-completed";
+// 앱 전역 CopilotProvider에서 구분하는 도메인별 tour id.
+export type TutorialTourId = "main-empty" | "main-completed" | "calendar";
 
 export type TutorialActionType = "next" | "finish" | "confirm";
 

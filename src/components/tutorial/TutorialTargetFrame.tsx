@@ -1,5 +1,11 @@
 import type { ReactElement } from 'react';
-import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import {
+  StyleSheet,
+  View,
+  type AccessibilityState,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import { CopilotStep, useCopilot, walkthroughable } from 'react-native-copilot';
 import { colors } from '@/src/constants/colors';
 import type { TutorialStepConfig } from './tutorialTypes';
@@ -27,10 +33,19 @@ type Props = {
   // 고정하고, 여기 style에는 "control을 감싸는 이 wrapper가 부모 안에서 어떻게 배치되는지"
   // (alignSelf, marginTop 등 레이아웃 배치값)만 전달한다 — 시각적 프레임 크기는 건드리지 않는다.
   style?: StyleProp<ViewStyle>;
+  accessibilityLabel?: string;
+  accessibilityState?: AccessibilityState;
   children: ReactElement;
 };
 
-export function TutorialTargetFrame({ stepConfig, active, style, children }: Props) {
+export function TutorialTargetFrame({
+  stepConfig,
+  active,
+  style,
+  accessibilityLabel,
+  accessibilityState,
+  children,
+}: Props) {
   const { currentStep } = useCopilot();
   // [버그 수정] react-native-copilot의 currentStep은 stop() 이후에도 즉시 undefined로
   // 리셋되지 않는다(실기기 확인: 각 tour의 "마지막" step — main-empty의 "메모장에서
@@ -48,7 +63,12 @@ export function TutorialTargetFrame({ stepConfig, active, style, children }: Pro
       text={stepConfig.description ?? stepConfig.title}
       active={active}
     >
-      <WalkthroughableView collapsable={false} style={style}>
+      <WalkthroughableView
+        collapsable={false}
+        style={style}
+        accessibilityLabel={accessibilityLabel}
+        accessibilityState={accessibilityState}
+      >
         {/* 흰 프레임은 control 위에 겹쳐 그리는 absolute 배경일 뿐이다(pointerEvents:none).
             절대 위치 자식은 Yoga 레이아웃 계산에서 부모 크기에 영향을 주지 않으므로,
             이 WalkthroughableView가 measure()로 보고하는 크기는 여전히 children의
