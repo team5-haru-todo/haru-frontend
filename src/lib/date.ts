@@ -6,6 +6,21 @@ const KST_DATE_FORMAT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul
 // "37일 전" 같은 값은 사용자가 날짜를 역산해야 해서 정보 구실을 못 한다.
 const RELATIVE_DAYS_LIMIT = 7;
 
+// 가입한 날을 1일째로 포함해 오늘까지 함께한 KST 달력 일수를 계산한다.
+export function countInclusiveDaysSince(createdAt: string): number {
+  const created = new Date(createdAt);
+  if (Number.isNaN(created.getTime())) {
+    return 0;
+  }
+
+  const createdKey = KST_DATE_FORMAT.format(created);
+  const todayKey = KST_DATE_FORMAT.format(new Date());
+  const createdUtc = Date.parse(`${createdKey}T00:00:00Z`);
+  const todayUtc = Date.parse(`${todayKey}T00:00:00Z`);
+
+  return Math.max(1, Math.round((todayUtc - createdUtc) / 86_400_000) + 1);
+}
+
 // 메모 작성 시점을 표시한다 ("오늘" / "어제" / "N일 전" / "7월 20일").
 // 경과 시간이 아니라 KST 달력 날짜 차이 기준이라, 자정을 넘기면 곧바로 "어제"가 된다.
 // (경과 시간으로 계산하면 어젯밤에 적은 메모가 다음 날 아침에도 "오늘"로 남는다)

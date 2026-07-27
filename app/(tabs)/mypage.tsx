@@ -17,8 +17,10 @@ import { colors } from '@/src/constants/colors';
 import { layout } from '@/src/constants/layout';
 import { StatusBarSpacer } from '@/src/components/common/StatusBarSpacer';
 import { getMySettings, updateMySettings } from '@/src/api/user';
+import { getStreak } from '@/src/api/record';
 import { useUserStore } from '@/src/store/userStore';
 import { registerForPushNotifications } from '@/src/services/pushNotifications';
+import { countInclusiveDaysSince } from '@/src/lib/date';
 
 const ICON_ARROW_RIGHT = require('../../assets/images/Icon/Arrow_Right_xs.png');
 const SUPPORT_EMAIL = 'support@example.com';
@@ -29,6 +31,7 @@ export default function MyPageScreen() {
   const isGuest = user?.status === 'GUEST';
   const [pushEnabled, setPushEnabled] = useState(true);
   const [pushUpdating, setPushUpdating] = useState(false);
+  const [totalSuccessDays, setTotalSuccessDays] = useState(0);
   const [loading, setLoading] = useState(true);
 
   // 계정 관리 화면에서 연동/탈퇴 등으로 상태가 바뀐 뒤 이 탭으로 돌아왔을 때도
@@ -40,9 +43,16 @@ export default function MyPageScreen() {
       async function fetchData() {
         try {
           await fetchUser();
-          const settings = await getMySettings();
+          const [settings, streak] = await Promise.all([
+            getMySettings(),
+            getStreak().catch((error) => {
+              console.error('누적 성공 일수 조회 실패:', error);
+              return null;
+            }),
+          ]);
           if (!isMounted) return;
           setPushEnabled(settings.pushEnabled);
+          setTotalSuccessDays(streak?.totalSuccessDays ?? 0);
         } catch (error) {
           console.error('마이페이지 정보 조회 실패:', error);
         } finally {
@@ -54,7 +64,7 @@ export default function MyPageScreen() {
       return () => {
         isMounted = false;
       };
-    }, [])
+    }, [fetchUser])
   );
 
   const handleTogglePush = async () => {
@@ -112,6 +122,7 @@ export default function MyPageScreen() {
     user?.connectedProviders && user.connectedProviders.length > 0
       ? `${user.connectedProviders[0] === 'kakao' ? '카카오' : user.connectedProviders[0]} 계정 연결됨`
       : '연결된 계정 없음';
+  const togetherDays = user?.createdAt ? countInclusiveDaysSince(user.createdAt) : 0;
 
   if (loading) {
     return (
@@ -133,19 +144,39 @@ export default function MyPageScreen() {
         </View>
 
         <View style={styles.profileArea}>
-          <View style={styles.profileLeft}>
-            <View style={styles.profileTexts}>
-              <Text style={styles.profileName}>{isGuest ? '게스트' : user?.nickname ?? '-'}</Text>
-              <Text style={styles.profileAccount}>{isGuest ? '게스트로 로그인됨' : connectedLabel}</Text>
+          <View style={styles.profileRow}>
+            <View style={styles.profileLeft}>
+              <View style={styles.profileTexts}>
+                <Text style={styles.profileName}>{isGuest ? '게스트' : user?.nickname ?? '-'}</Text>
+                <Text style={styles.profileAccount}>{isGuest ? '게스트로 로그인됨' : connectedLabel}</Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={styles.accountBtn}
+              activeOpacity={0.7}
+              onPress={() => router.push('/account-management')}
+            >
+              <Text style={styles.accountBtnText}>{isGuest ? '계정 연결하기' : '계정 관리'}</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.statsCard}>
+            <View style={styles.statsColumn}>
+              <Text style={styles.statsLabel}>함께한 시간</Text>
+              <View style={styles.statsValueRow}>
+                <Text style={styles.statsValue}>{togetherDays}</Text>
+                <Text style={styles.statsUnit}>일</Text>
+              </View>
+            </View>
+            <View style={styles.statsDivider} />
+            <View style={styles.statsColumn}>
+              <Text style={styles.statsLabel}>해낸 하루</Text>
+              <View style={styles.statsValueRow}>
+                <Text style={styles.statsValue}>{totalSuccessDays}</Text>
+                <Text style={styles.statsUnit}>일</Text>
+              </View>
             </View>
           </View>
-          <TouchableOpacity
-            style={styles.accountBtn}
-            activeOpacity={0.7}
-            onPress={() => router.push('/account-management')}
-          >
-            <Text style={styles.accountBtnText}>{isGuest ? '계정 연결하기' : '계정 관리'}</Text>
-          </TouchableOpacity>
         </View>
 
         <View style={styles.sectionDivider} />
@@ -194,6 +225,14 @@ export default function MyPageScreen() {
               <Text style={styles.listItemText}>약관 및 정책</Text>
               <Image source={ICON_ARROW_RIGHT} style={styles.listIcon} />
             </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.listItem}
+              activeOpacity={0.7}
+              onPress={() => router.push('/(tutorial)')}
+            >
+              <Text style={styles.listItemText}>튜토리얼 다시 보기</Text>
+              <Image source={ICON_ARROW_RIGHT} style={styles.listIcon} />
+            </TouchableOpacity>
           </View>
 
           <View style={styles.sectionGroup}>
@@ -239,14 +278,19 @@ const styles = StyleSheet.create({
     lineHeight: 26,
   },
   profileArea: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
+    gap: 30,
     paddingHorizontal: 20,
-    paddingVertical: 24,
+    paddingTop: 24,
+    paddingBottom: 30,
     borderBottomWidth: 1,
     borderBottomColor: '#E8E9EC',
     backgroundColor: '#FFFFFF',
+    width: '100%',
+  },
+  profileRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
     width: '100%',
   },
   profileLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
@@ -283,6 +327,53 @@ const styles = StyleSheet.create({
     fontFamily: 'Pretendard-Medium',
     color: colors.text.secondary,
     lineHeight: 16,
+  },
+  statsCard: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: 12,
+    backgroundColor: colors.surface.sunken,
+    overflow: 'hidden',
+  },
+  statsColumn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+  },
+  statsLabel: {
+    fontSize: 11,
+    fontFamily: 'Pretendard-Regular',
+    color: colors.text.primary,
+    lineHeight: 14,
+  },
+  statsValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+  },
+  statsValue: {
+    fontSize: 18,
+    fontFamily: 'Pretendard-SemiBold',
+    color: colors.text.primary,
+    lineHeight: 26,
+    letterSpacing: -0.5,
+  },
+  statsUnit: {
+    fontSize: 14,
+    fontFamily: 'Pretendard-Medium',
+    color: colors.text.secondary,
+    lineHeight: 20,
+  },
+  statsDivider: {
+    width: 1,
+    height: 20,
+    backgroundColor: colors.button.disabled,
   },
   sectionDivider: { height: 8, backgroundColor: '#F4F5F7', width: '100%' },
   settingsList: {
@@ -334,7 +425,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     position: 'relative',
   },
-  toggleOn: { backgroundColor: '#65C466' },
+  toggleOn: { backgroundColor: colors.primary.default },
   toggleOff: { backgroundColor: '#E8E9EC' },
   toggleKnob: {
     position: 'absolute',
