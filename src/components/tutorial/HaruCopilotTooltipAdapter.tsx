@@ -1,4 +1,5 @@
 import { mainTutorialStepConfigs } from '@/src/components/main/tutorial/mainTutorialConfigs';
+import { calendarTutorialStepConfigs } from '@/src/components/calendar/tutorial/calendarTutorialConfigs';
 import { useTutorialStore } from '@/src/store/tutorialStore';
 import { useEffect, useState } from 'react';
 import { useWindowDimensions } from 'react-native';
@@ -27,9 +28,12 @@ const ARROW_WIDTH = 20;
 const ARROW_HALF_WIDTH = ARROW_WIDTH / 2;
 const ARROW_EDGE_GUARD = 24;
 
-// 유일하게 "target 아래에 말풍선(꼭지는 카드 위쪽)"인 step. 나머지 세 step은 전부
-// "target 위에 말풍선(꼭지는 카드 아래쪽)"이다 — 피그마 요구사항 그대로.
-const BELOW_TARGET_STEP_NAME = 'main-empty-input';
+// target 아래에 말풍선(꼭지는 카드 위쪽)을 배치하는 단계 목록.
+const BELOW_TARGET_STEP_NAMES = new Set([
+  'main-empty-input',
+  'calendar-summary',
+  'calendar-grid',
+]);
 
 type MeasuredRect = { x: number; y: number; width: number; height: number };
 
@@ -44,7 +48,7 @@ function computeArrowLeft(targetCenterX: number, tooltipScreenLeft: number, tool
 function computePlacement(rect: MeasuredRect, windowWidth: number, stepName: string): TutorialTooltipPlacement {
   const width = Math.min(windowWidth - TOOLTIP_SIDE_MARGIN * 2, TOOLTIP_WIDTH_MAX);
   const screenLeft = (windowWidth - width) / 2;
-  const isBelowTarget = stepName === BELOW_TARGET_STEP_NAME;
+  const isBelowTarget = BELOW_TARGET_STEP_NAMES.has(stepName);
   const screenTop = isBelowTarget
     ? rect.y + rect.height + TARGET_FRAME_INSET + TARGET_ARROW_VISUAL_GAP + ARROW_HEIGHT
     : rect.y - TARGET_FRAME_INSET - TARGET_ARROW_VISUAL_GAP - ARROW_HEIGHT - TOOLTIP_HEIGHT;
@@ -90,7 +94,9 @@ export function HaruCopilotTooltipAdapter(_props: TooltipProps) {
     };
   }, [currentStep, windowWidth]);
 
-  const cfg = currentStep?.name ? mainTutorialStepConfigs[currentStep.name] : undefined;
+  const cfg = currentStep?.name
+    ? mainTutorialStepConfigs[currentStep.name] ?? calendarTutorialStepConfigs[currentStep.name]
+    : undefined;
   if (!cfg || !currentStep || !placement) return null;
 
   const finishTour = async (markSeen: boolean) => {

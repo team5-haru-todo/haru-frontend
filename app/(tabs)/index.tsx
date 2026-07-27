@@ -738,6 +738,9 @@ export default function MainScreen() {
   useEffect(() => {
     if (!completionEvent) return;
     const { tourId } = completionEvent;
+    // 탭 화면은 언마운트되지 않으므로 캘린더 등 다른 도메인의 완료 이벤트도 보일 수 있다.
+    // 메인 화면은 자신이 소유한 두 tour만 소비하고, 나머지는 해당 화면이 처리하게 둔다.
+    if (tourId !== "main-empty" && tourId !== "main-completed") return;
     useTutorialStore.getState().clearCompletion();
 
     const payload =

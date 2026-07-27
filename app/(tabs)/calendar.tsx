@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 import {
   getMonthlyCalendar,
   type CalendarRecord,
@@ -12,6 +13,7 @@ import {
   ScrollView,
   StyleSheet,
   Image,
+  InteractionManager,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
@@ -19,6 +21,11 @@ import { colors } from '@/src/constants/colors';
 import { logEvent } from '@/src/lib/analytics';
 import { layout } from '@/src/constants/layout';
 import { StatusBarSpacer } from '@/src/components/common/StatusBarSpacer';
+import { getMySettings, updateMySettings } from '@/src/api/user';
+import { useCopilot } from 'react-native-copilot';
+import { TutorialTargetFrame } from '@/src/components/tutorial/TutorialTargetFrame';
+import { calendarTutorialStepConfigs } from '@/src/components/calendar/tutorial/calendarTutorialConfigs';
+import { useTutorialStore } from '@/src/store/tutorialStore';
 
 const ICON_ARROW_LEFT = require('../../assets/images/Icon/Arrow_left.png');
 const ICON_ARROW_RIGHT = require('../../assets/images/Icon/Arrow_right.png');
@@ -50,6 +57,13 @@ function getMonthKey(year: number, month: number) {
 }
 
 export default function CalendarScreen() {
+  const isFocused = useIsFocused();
+  const { start, totalStepsNumber, copilotEvents } = useCopilot();
+  const activeTourId = useTutorialStore((state) => state.activeTourId);
+  const isTutorialRunning = useTutorialStore((state) => state.isRunning);
+  const completionEvent = useTutorialStore((state) => state.completionEvent);
+  const tutorialCheckedRef = useRef(false);
+  const startRequestedRef = useRef(false);
   const today = new Date();
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(today.getMonth() + 1);
@@ -63,11 +77,87 @@ export default function CalendarScreen() {
   }));
   const [streak, setStreak] = useState<StreakSummary | null>(null);
   const [streakLoading, setStreakLoading] = useState(true);
-
   const isCurrentMonthState = calendarState.monthKey === monthKey;
   const records = isCurrentMonthState ? calendarState.records : EMPTY_CALENDAR_RECORDS;
   const loading = !isCurrentMonthState || calendarState.loading;
   const error = isCurrentMonthState ? calendarState.error : null;
+
+  useEffect(() => {
+    const handleStart = () => useTutorialStore.getState().setRunning(true);
+    const handleStop = () => {
+      startRequestedRef.current = false;
+      useTutorialStore.getState().setRunning(false);
+      if (useTutorialStore.getState().activeTourId === 'calendar') {
+        useTutorialStore.getState().setActiveTourId(null);
+      }
+    };
+    copilotEvents.on('start', handleStart);
+    copilotEvents.on('stop', handleStop);
+    return () => {
+      copilotEvents.off('start', handleStart);
+      copilotEvents.off('stop', handleStop);
+    };
+  }, [copilotEvents]);
+
+  // active=true가 렌더된 뒤 CopilotStep 두 개가 모두 등록되어야 start()를 호출할 수 있다.
+  // 메인 튜토리얼과 동일하게 totalStepsNumber를 기준으로 기다려, 실기기에서 등록 전
+  // start()가 조용히 무시되는 경합을 막는다.
+  useEffect(() => {
+    if (
+      activeTourId !== 'calendar' ||
+      isTutorialRunning ||
+      startRequestedRef.current ||
+      totalStepsNumber !== 2
+    ) {
+      return;
+    }
+
+    startRequestedRef.current = true;
+    const interaction = InteractionManager.runAfterInteractions(() => {
+      requestAnimationFrame(() => {
+        start().catch((requestError) => {
+          console.error('캘린더 튜토리얼 시작 실패:', requestError);
+          startRequestedRef.current = false;
+          useTutorialStore.getState().setRunning(false);
+          useTutorialStore.getState().setActiveTourId(null);
+        });
+      });
+    });
+
+    return () => interaction.cancel();
+  }, [activeTourId, isTutorialRunning, start, totalStepsNumber]);
+
+  useEffect(() => {
+    if (!isFocused || loading || streakLoading || tutorialCheckedRef.current) return;
+    tutorialCheckedRef.current = true;
+    let cancelled = false;
+
+    getMySettings()
+      .then((settings) => {
+        if (cancelled || settings.calendarTutorialSeen) return;
+        const store = useTutorialStore.getState();
+        if (store.activeTourId || store.isRunning) return;
+        startRequestedRef.current = false;
+        store.setRunning(false);
+        store.setActiveTourId('calendar');
+      })
+      .catch((requestError) => {
+        console.error('캘린더 튜토리얼 시작 실패:', requestError);
+        useTutorialStore.getState().setActiveTourId(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isFocused, loading, streakLoading]);
+
+  useEffect(() => {
+    if (completionEvent?.tourId !== 'calendar') return;
+    useTutorialStore.getState().clearCompletion();
+    updateMySettings({ calendarTutorialSeen: true }).catch((requestError) => {
+      console.error('캘린더 튜토리얼 완료 저장 실패:', requestError);
+    });
+  }, [completionEvent]);
 
   // 탭 화면은 전환해도 언마운트되지 않아 다른 달을 보던 상태가 남는다.
   // 탭이 다시 focus될 때마다 오늘 기준 연/월/일로 되돌려, 캘린더에 들어오면 항상 이번 달이 보이게 한다.
@@ -224,7 +314,12 @@ export default function CalendarScreen() {
         </View>
 
         {/* Card_AchieveSummary: gap=12, px=16, py=12, items-center, justify-center */}
-        <View style={styles.statsCard}>
+        <TutorialTargetFrame
+          stepConfig={calendarTutorialStepConfigs['calendar-summary']}
+          active={activeTourId === 'calendar'}
+          style={styles.statsCard}
+        >
+          <>
           <View style={styles.statCell}>
             <Text style={styles.statLabel}>이번 달 완료</Text>
             {loading ? (
@@ -242,15 +337,19 @@ export default function CalendarScreen() {
               <Text style={styles.statValue}>{streak?.currentStreak ?? 0}일</Text>
             )}
           </View>
-        </View>
+          </>
+        </TutorialTargetFrame>
 
         {/* Calendar_Section: flex-col gap=21, items-center, px=20, py=30, flex=1
             Content_Area gap=24 → marginTop=24 */}
-        <View
+        <TutorialTargetFrame
+          stepConfig={calendarTutorialStepConfigs['calendar-grid']}
+          active={activeTourId === 'calendar'}
           style={styles.calSection}
           accessibilityState={{ busy: loading }}
           accessibilityLabel={loading ? '캘린더 기록을 불러오는 중' : undefined}
         >
+          <>
           {error && !loading && (
             <View style={styles.errorBanner}>
               <Text style={[styles.feedbackText, styles.errorText]}>{error}</Text>
@@ -321,7 +420,8 @@ export default function CalendarScreen() {
               );
             })}
           </View>
-        </View>
+          </>
+        </TutorialTargetFrame>
 
         {/* Section_SelectedDay: marginTop=24, px=20, pt=16 */}
         {selectedDay !== null && (
