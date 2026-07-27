@@ -65,12 +65,17 @@ function roundedSpotlightPath({
 // justifyContent:'flex-start')에 종속된 자체 flex 레이아웃을 갖고 있어, TutorialTargetFrame이
 // 기대하는 "콘텐츠 크기에 padding만 더해 자연스럽게 hug"가 되지 않고 부모 아이템 박스 크기
 // 그대로 측정되는 문제가 있었다. 대신 아이콘+라벨을 이 함수가 직접, 명시적으로 렌더한다
-// (props.children은 버리고 focused 여부만 accessibilityState에서 가져온다).
+// (props.children은 버리고 focused 여부만 props에서 직접 가져온다 — 아래 주석 참고).
 function TutorialMemoTabButton(props: BottomTabBarButtonProps) {
   const activeTourId = useTutorialStore((s) => s.activeTourId);
   const isTourActive = activeTourId === 'main-empty';
   const memoTabStepCfg = mainTutorialStepConfigs['main-empty-memo-tab'];
-  const focused = props.accessibilityState?.selected ?? false;
+  // [버그 수정] @react-navigation/bottom-tabs v7은 tabBarButton에 포커스 상태를
+  // accessibilityState가 아니라 aria-selected로 넘긴다(RN 0.71+에 추가된 aria-* 별칭).
+  // 두 이름은 네이티브 접근성 상태로 내려갈 때만 합쳐지고 props 객체에서는 서로 복사되지
+  // 않으므로, accessibilityState를 읽으면 항상 undefined가 나와 `?? false`에 걸렸다. 그 결과
+  // 메모 탭이 선택돼도 focused가 계속 false여서 아이콘·라벨이 활성 색상으로 바뀌지 않았다.
+  const focused = props['aria-selected'] ?? false;
 
   return (
     <HapticTab
