@@ -23,7 +23,7 @@ import { registerForPushNotifications } from '@/src/services/pushNotifications';
 import { countInclusiveDaysSince } from '@/src/lib/date';
 
 const ICON_ARROW_RIGHT = require('../../assets/images/Icon/Arrow_Right_xs.png');
-const SUPPORT_EMAIL = 'support@example.com';
+const SUPPORT_EMAIL = 'team5devlab@gmail.com';
 
 export default function MyPageScreen() {
   const user = useUserStore((state) => state.user);
