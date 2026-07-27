@@ -25,6 +25,9 @@ export interface UserSettingsResponse {
   // "이 버전의 튜토리얼을 아직 안 봤는지"가 판단 기준이다(백엔드 UserSettingsResponse와 동일).
   mainTutorialVersion: number;
   mainCompletedTutorialVersion: number;
+  // 메모장 진입 시 스와이프 프리뷰를 이미 봤는지 여부(HARU-38).
+  // 백엔드 컬럼 배포 전에는 응답에 없어 undefined로 오므로 optional로 둔다.
+  memoSlidePreviewSeen?: boolean;
 }
 
 export interface UpdateUserSettingsRequest {
@@ -34,6 +37,7 @@ export interface UpdateUserSettingsRequest {
   calendarTutorialSeen?: boolean;
   mainTutorialVersion?: number;
   mainCompletedTutorialVersion?: number;
+  memoSlidePreviewSeen?: boolean;
 }
 
 export interface WithdrawRequest {

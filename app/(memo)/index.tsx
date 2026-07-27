@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useRouter, useSegments } from 'expo-router';
+import { useFocusEffect, useRouter, useSegments } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -97,6 +97,9 @@ export default function MemoListScreen() {
     reorderMemos,
     refreshMemos,
   } = useMemos();
+  // 포커스 시점의 최신 목록을 의존성 없이 읽기 위한 ref (아래 프리뷰 판정에서 사용).
+  const memosRef = useRef(memos);
+  memosRef.current = memos;
   const [isAdding, setIsAdding] = useState(false);
   const [memoText, setMemoText] = useState('');
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
@@ -105,6 +108,11 @@ export default function MemoListScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [tutorialVisible, setTutorialVisible] = useState(false);
   const tutorialCheckedRef = useRef(false);
+  // 진입 시 첫 카드에 스와이프 프리뷰를 1회 노출할지(HARU-38).
+  const [slidePreviewActive, setSlidePreviewActive] = useState(false);
+  // 이번 세션에서 판정이 끝났는지. 서버 플래그(memoSlidePreviewSeen)가 계정 단위 1회를
+  // 보장하고, 이 ref는 그 위에서 포커스마다 설정을 다시 조회하지 않게 막는 역할이다.
+  const slidePreviewShownRef = useRef(false);
   // 튜토리얼이 덮어야 할 목록 영역의 아래 경계. 진입 경로(탭/푸시)와 기기 inset에 따라
   // 위치가 달라져서 고정값을 쓸 수 없다.
   const addButtonWrapperRef = useRef<View>(null);
@@ -160,14 +168,67 @@ export default function MemoListScreen() {
     tutorialCheckedRef.current = true;
     getMySettings()
       .then((settings) => {
+        // 튜토리얼과 프리뷰가 동시에 뜨면 안 된다. 아직 튜토리얼을 안 본 계정은 튜토리얼만.
         if (settings.memoTutorialSeen === false) {
           setTutorialVisible(true);
+          return;
         }
       })
       .catch((settingsError) => {
         console.error('메모 튜토리얼 노출 여부 조회 실패:', settingsError);
       });
   }, [loading]);
+
+  // 스와이프 프리뷰 노출 판정(HARU-38).
+  // [주의] 이 화면은 탭 화면이기도 하다 — app/(tabs)/memo.tsx가 같은 컴포넌트를 re-export하므로
+  // 탭을 옮겼다 돌아와도 언마운트되지 않는다. 그래서 "진입"을 마운트로 판단하면(useEffect)
+  // "빈 목록으로 처음 들어옴 → 메모 추가 → 나갔다 복귀"라는 정상 경로에서 영영 안 뜬다.
+  // 포커스마다 다시 판정해야 한다.
+  useFocusEffect(
+    useCallback(() => {
+      if (loading || slidePreviewShownRef.current || memosRef.current.length === 0) {
+        return;
+      }
+      let cancelled = false;
+      getMySettings()
+        .then((settings) => {
+          if (cancelled || slidePreviewShownRef.current) {
+            return;
+          }
+          // 프리뷰 대상은 튜토리얼을 이미 본 "기존 사용자"뿐이다. 튜토리얼 대기 중이면
+          // 그쪽이 먼저고, 값을 모르면(배포 순서가 어긋나 필드가 없으면 undefined) 띄우지
+          // 않는다 — 이 화면의 튜토리얼 판정과 같은 원칙이다(모를 때 띄우는 쪽이 더 나쁘다).
+          // 여기서는 ref를 잠그지 않는다 — 튜토리얼을 마치면 프리뷰 대상이 되므로
+          // 다음 포커스에 다시 판정해야 한다(잠그면 그 세션 내내 못 뜬다).
+          if (settings.memoTutorialSeen !== true) {
+            return;
+          }
+          if (settings.memoSlidePreviewSeen === true) {
+            // 이미 본 계정으로 확정 → 이번 세션에는 더 조회하지 않는다.
+            // (이 화면은 탭 화면이라 포커스마다 판정이 도는데, 여기서 안 잠그면
+            //  이미 본 사용자가 메모장에 들어올 때마다 설정 조회를 반복하게 된다)
+            slidePreviewShownRef.current = true;
+            return;
+          }
+          slidePreviewShownRef.current = true;
+          setSlidePreviewActive(true);
+          // 노출 시점에 바로 기록한다 — 애니메이션 도중 화면을 벗어나도 "봤다"로 치는 편이
+          // 다시 뜨는 것보다 낫다. 저장이 실패해도 위 ref가 이번 세션은 막아주고,
+          // 다음 실행 때 한 번 더 뜨는 정도로 끝난다(튜토리얼과 같은 정책).
+          updateMySettings({ memoSlidePreviewSeen: true }).catch((saveError) => {
+            console.error('스와이프 프리뷰 노출 기록 저장 실패:', saveError);
+          });
+        })
+        .catch((settingsError) => {
+          console.error('스와이프 프리뷰 노출 여부 조회 실패:', settingsError);
+        });
+      return () => {
+        cancelled = true;
+      };
+      // memos는 ref로 읽는다 — 의존성에 넣으면 화면에 머무는 중 메모를 추가하자마자
+      // 프리뷰가 떠버린다. 스펙은 "진입 시"라 포커스 시점의 값만 보면 된다.
+    }, [loading])
+  );
 
   const handleTutorialFinish = async () => {
     setTutorialVisible(false);
@@ -263,6 +324,10 @@ export default function MemoListScreen() {
 
   const pinnedMemos = memos.filter((memo) => memo.taskType === 'RECURRING');
   const unpinnedMemos = memos.filter((memo) => memo.taskType !== 'RECURRING');
+  // 프리뷰 대상 = 화면에 가장 먼저 보이는 카드. 즐겨찾기 섹션이 위라 그쪽이 있으면 그게 첫 카드다.
+  const slidePreviewTargetId = slidePreviewActive
+    ? ((pinnedMemos[0] ?? unpinnedMemos[0])?.id ?? null)
+    : null;
 
   const renderInput = () => (
     <TextInput
@@ -357,6 +422,9 @@ export default function MemoListScreen() {
         <DraggableMemoRow
           memo={item.memo}
           isEditing={editingId === item.memo.id}
+          showSlidePreview={item.memo.id === slidePreviewTargetId}
+          // 노출 기록 저장은 시작 시점에 이미 했다(위 판정부). 여기서는 상태만 되돌린다.
+          onSlidePreviewEnd={() => setSlidePreviewActive(false)}
           {...memoRowHandlers}
         />
       </View>
