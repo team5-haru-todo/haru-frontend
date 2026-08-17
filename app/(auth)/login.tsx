@@ -83,7 +83,7 @@ export default function LoginScreen() {
       }
 
       // 3. 기존 유저 — 바로 로그인 처리 (termsVersion은 최초 가입 때 이미 저장되어 있으므로 서버에서 무시됨)
-      const { accessToken, user } = await loginWithKakao({
+      const { accessToken, refreshToken, user } = await loginWithKakao({
         accessToken: kakaoToken.accessToken,
         termsVersion: '',
         agreedAt: new Date().toISOString(),
@@ -91,6 +91,7 @@ export default function LoginScreen() {
 
       if (Platform.OS !== 'web') {
         await SecureStore.setItemAsync('authToken', accessToken);
+        await SecureStore.setItemAsync('refreshToken', refreshToken);
       }
       await fetchUser();
       router.replace(user.hasSeenOnboarding ? '/(tabs)' : '/(tutorial)');
@@ -131,7 +132,7 @@ export default function LoginScreen() {
       }
 
       // 3. 기존 유저 — 바로 로그인 처리
-      const { accessToken, user } = await loginWithApple({
+      const { accessToken, refreshToken, user } = await loginWithApple({
         identityToken: credential.identityToken,
         termsVersion: '',
         agreedAt: new Date().toISOString(),
@@ -139,6 +140,7 @@ export default function LoginScreen() {
 
       if (Platform.OS !== 'web') {
         await SecureStore.setItemAsync('authToken', accessToken);
+        await SecureStore.setItemAsync('refreshToken', refreshToken);
       }
       await fetchUser();
       router.replace(user.hasSeenOnboarding ? '/(tabs)' : '/(tutorial)');
