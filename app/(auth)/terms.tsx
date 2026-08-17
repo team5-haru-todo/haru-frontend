@@ -76,9 +76,10 @@ export default function TermsScreen() {
 
       if (isGuestMode) {
         // 게스트 최초 진입 — 약관 동의 후 게스트 계정 생성
-        const { accessToken, user } = await loginAsGuest({ termsVersion: TERMS_VERSION, agreedAt });
+        const { accessToken, refreshToken, user } = await loginAsGuest({ termsVersion: TERMS_VERSION, agreedAt });
         if (Platform.OS !== 'web') {
           await SecureStore.setItemAsync('authToken', accessToken);
+          await SecureStore.setItemAsync('refreshToken', refreshToken);
         }
         await fetchUser();
         router.replace(user.hasSeenOnboarding ? '/(tabs)' : '/(tutorial)');
@@ -87,13 +88,27 @@ export default function TermsScreen() {
 
       if (isLinkMode) {
         // 게스트 계정에 소셜 계정 연동
+        // linkKakao/linkApple은 내부적으로 Refresh Token을 로테이션(재발급)하므로,
+        // 응답으로 온 새 토큰을 반드시 저장해야 기존 게스트 세션의 자동 재인증이 계속 유효하다.
+        let linkedAccessToken: string;
+        let linkedRefreshToken: string;
+
         if (provider === 'kakao' && kakaoAccessToken) {
-          await linkKakao({ accessToken: kakaoAccessToken, termsVersion: TERMS_VERSION, agreedAt });
+          const result = await linkKakao({ accessToken: kakaoAccessToken, termsVersion: TERMS_VERSION, agreedAt });
+          linkedAccessToken = result.accessToken;
+          linkedRefreshToken = result.refreshToken;
         } else if (provider === 'apple' && appleIdentityToken) {
-          await linkApple({ identityToken: appleIdentityToken, termsVersion: TERMS_VERSION, agreedAt });
+          const result = await linkApple({ identityToken: appleIdentityToken, termsVersion: TERMS_VERSION, agreedAt });
+          linkedAccessToken = result.accessToken;
+          linkedRefreshToken = result.refreshToken;
         } else {
           console.error('약관 동의 처리 실패: 연동 토큰 정보가 없습니다.');
           return;
+        }
+
+        if (Platform.OS !== 'web') {
+          await SecureStore.setItemAsync('authToken', linkedAccessToken);
+          await SecureStore.setItemAsync('refreshToken', linkedRefreshToken);
         }
         await fetchUser();
         router.replace('/account-management');
@@ -102,6 +117,7 @@ export default function TermsScreen() {
 
       // 신규 가입 (로그인 화면에서 온 경우)
       let accessToken: string;
+      let refreshToken: string;
       let user;
 
       if (provider === 'kakao' && kakaoAccessToken) {
@@ -111,6 +127,7 @@ export default function TermsScreen() {
           agreedAt,
         });
         accessToken = result.accessToken;
+        refreshToken = result.refreshToken;
         user = result.user;
       } else if (provider === 'apple' && appleIdentityToken) {
         const result = await loginWithApple({
@@ -119,6 +136,7 @@ export default function TermsScreen() {
           agreedAt,
         });
         accessToken = result.accessToken;
+        refreshToken = result.refreshToken;
         user = result.user;
       } else {
         console.error('약관 동의 처리 실패: 로그인 토큰 정보가 없습니다.');
@@ -127,6 +145,7 @@ export default function TermsScreen() {
 
       if (Platform.OS !== 'web') {
         await SecureStore.setItemAsync('authToken', accessToken);
+        await SecureStore.setItemAsync('refreshToken', refreshToken);
       }
       await fetchUser();
       router.replace(user.hasSeenOnboarding ? '/(tabs)' : '/(tutorial)');

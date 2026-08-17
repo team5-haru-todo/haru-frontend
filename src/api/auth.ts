@@ -6,6 +6,7 @@ import { useTutorialStore } from '@/src/store/tutorialStore';
 
 export interface LoginResponse {
   accessToken: string;
+  refreshToken: string;
   user: {
     id: string;
     nickname: string;
@@ -34,6 +35,11 @@ export interface GuestLoginRequest {
 
 export interface SocialUserCheckResponse {
   isNewUser: boolean;
+}
+
+export interface ReissueResponse {
+  accessToken: string;
+  refreshToken: string;
 }
 
 export async function loginAsGuest(request: GuestLoginRequest): Promise<LoginResponse> {
@@ -77,6 +83,12 @@ export async function linkApple(request: AppleLoginRequest): Promise<LoginRespon
   return response.data.data;
 }
 
+// Access Token 만료 시 Refresh Token으로 재발급받는다. (client.ts 인터셉터에서 호출됨)
+export async function reissue(refreshToken: string): Promise<ReissueResponse> {
+  const response = await apiClient.post('/api/auth/reissue', { refreshToken });
+  return response.data.data;
+}
+
 export async function logout(): Promise<void> {
   try {
     await apiClient.post('/api/auth/logout');
@@ -84,6 +96,7 @@ export async function logout(): Promise<void> {
     // 서버 요청 성공/실패와 무관하게 로컬 토큰은 항상 제거
     if (Platform.OS !== 'web') {
       await SecureStore.deleteItemAsync('authToken');
+      await SecureStore.deleteItemAsync('refreshToken');
     }
     // 이전 계정의 활성 tour/미처리 completionEvent가 다음 로그인 계정으로 새어 들어가지
     // 않게 세션 종료 시점에 명시적으로 초기화한다.
