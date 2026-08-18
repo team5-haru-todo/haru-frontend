@@ -19,7 +19,7 @@
 
 | Pictures | | | | |
 |---|---|---|---|---|
-| Name | 김다은 · 팀장 | 조아영 | 최희원 | 정윤서 |
+| Name | 김다은 | 조아영 | 최희원 | 정윤서 |
 | Role | • 인증/온보딩/설정 담당<br>• 마이페이지 디자인 및 기능 구현<br>• Refresh Token 인증 구조 설계<br>• 게스트 로그인 정책 설계 및 구현<br>• 회원 탈퇴/계정 관리<br>• 이용약관 | • 인프라 담당<br>• Task 도메인 API 및 데이터 처리 구현<br>• 메모장(Task) UI 담당<br>• CI/CD 파이프라인 | 메인 담당<br>• 메인 도메인 API 설계<br>• 메인 UI 구현 담당 | 캘린더 · 마이페이지 퍼블리싱 담당<br>• 캘린더, 알림 DB 및 API 설계<br>• FCM 및 Expo Notifications 설정<br>• 캘린더, 알림 도메인 담당<br>• 마이페이지 UI 퍼블리싱 |
 | GitHub | [@kimdevlab1](https://github.com/kimdevlab1) | [@Jay000005](https://github.com/Jay000005) | [@CHW0n](https://github.com/CHW0n) | [@kyokyonim](https://github.com/kyokyonim) |
 
