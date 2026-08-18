@@ -1,74 +1,83 @@
-# 하루한개 (Haru) - 프론트엔드
+# 하루한개 (Haru)
 
-> 하루에 딱 하나만 해도 괜찮아요
+완벽하지 않아도 괜찮아요, 오늘의 '한 개'만 해내는 습관 기록 앱
 
-하루한개(Haru) 앱의 프론트엔드 레포입니다. React Native + Expo로 개발하고 있습니다.
+> 5조 파이널 프로젝트 (부트캠프 팀 프로젝트)
+> 개발 기간 : 2026.06.20 ~ [정식 출시일]
 
-## 기술 스택
+## 🚀 배포 주소
 
-- React Native
-- Expo (SDK 54)
-- TypeScript
+프론트엔드 서비스 : [App Store / TestFlight 링크]
+백엔드 서버 : https://43.201.8.125.sslip.io
 
-## 시작하기
+## 📝 팀 문서
 
-### 1. 패키지 설치
+- [팀 노션 링크]
+- [백엔드 저장소](https://github.com/team5-haru-todo/haru-backend)
 
-npm install
+## 👥 팀 소개
 
-### 2. 앱 실행
+| Pictures | | | | |
+|---|---|---|---|---|
+| Name | 김다은 | 조아영 | 최희원 | 정윤서 |
+| Role | 팀장 · 인증/온보딩/설정 담당<br>• Refresh Token 인증 구조 설계<br>• 게스트 로그인 정책 설계 및 구현<br>• 회원 탈퇴/계정 관리<br>• 마이페이지, 이용약관 | 메모장 담당<br>• [조아영님 역할 채우기] | 메인·완료·스트릭 담당<br>• [최희원님 역할 채우기] | 캘린더·알림 담당<br>• [정윤서님 역할 채우기] |
+| GitHub | [@kimdevlab1](https://github.com/kimdevlab1) | [@아영님 GitHub] | [@희원님 GitHub] | [@윤서님 GitHub] |
 
-npx expo start
+## ☁️ 프로젝트 소개
 
-실행하면 터미널에 QR코드가 나타납니다. 핸드폰에 Expo Go 앱을 설치한 후 QR코드를 스캔하면 바로 확인할 수 있습니다.
+### 1. 프로젝트 컨셉
 
-- iOS: App Store에서 Expo Go 다운로드
-- Android: Play Store에서 Expo Go 다운로드
+- 완벽한 하루가 아니어도, 오늘 딱 하나만 해내면 충분하다는 메시지를 담은 습관 기록 앱
+- 로그인 없이도 핵심 기능을 모두 쓸 수 있는 게스트 모드 지원
+- 카카오·Apple 로그인으로 기록을 안전하게 보관하고 여러 기기에서 이어서 사용 가능
 
-## 브랜치 구조
+### 2. 기술 스택
 
-main
-└── develop
-    ├── feature/auth       (사용자·인증·설정)
-    ├── feature/memo       (메모장)
-    ├── feature/main       (메인·완료·스트릭)
-    └── feature/calendar   (캘린더·명세서·알림)
+**프론트엔드**
 
-## 작업 방식
+![React Native](https://img.shields.io/badge/react_native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![Expo](https://img.shields.io/badge/expo-1B1F23?style=for-the-badge&logo=expo&logoColor=white)
+![TypeScript](https://img.shields.io/badge/typescript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![Zustand](https://img.shields.io/badge/zustand-433E38?style=for-the-badge)
+![Axios](https://img.shields.io/badge/axios-5A29E4?style=for-the-badge&logo=axios&logoColor=white)
 
-1. 각자 본인 담당 feature 브랜치에서 작업합니다.
-2. 작업이 끝나면 develop 브랜치로 Pull Request를 생성합니다.
-3. develop에서 통합 테스트를 마친 후 main으로 머지합니다.
+**백엔드**
 
-## 담당자 및 도메인
+![Spring Boot](https://img.shields.io/badge/spring_boot-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/postgresql-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
 
-| 담당자 | 브랜치 | 도메인 | 작업 화면 |
-|---|---|---|---|
-| 김다은 | feature/auth | 사용자·인증·설정 | 로그인, 이용약관, 마이페이지 |
-| 조아영 | feature/memo | 메모장 | 할 일 목록, 추가/수정/삭제 |
-| 최희원 | feature/main | 메인·완료·스트릭 | 메인, 오늘의 한 개, 완료, 체크 |
-| 정윤서 | feature/calendar | 캘린더·명세서·알림 | 캘린더, 날짜 상세, 명세서, 알림 |
+## ✨ 주요 기능
 
-## 작업 시작 방법
+### 게스트 로그인
 
-git clone https://github.com/team5-haru-todo/haru-frontend.git
-cd haru-frontend
-git checkout feature/본인담당브랜치
-npm install
-npx expo start
+<img src="[스크린샷 경로]" width="240"/>
 
-## 프로젝트 구조
+로그인 없이도 등록·완료·메모장·캘린더·알림 등 핵심 기능을 모두 사용할 수 있습니다. 첫 완료 후, 그리고 기록이 쌓였을 때 로그인을 부드럽게 안내하며, 로그인을 거절해도 게스트로 계속 이용할 수 있습니다.
 
-이 프로젝트는 파일 기반 라우팅(file-based routing)을 사용합니다. app 디렉토리 안의 파일을 수정하면서 개발을 시작할 수 있습니다.
+### 오늘의 한 개 등록·완료
 
-## 일정
+<img src="[스크린샷 경로]" width="240"/>
 
-- 개발 시작: 2026.6.20
-- 1차 개발 완료 및 베타테스트: 2026.6.27
-- 최종 배포: 2026.7.13
+하루에 할 일을 딱 하나만 등록하고 완료하는 것에 집중한 메인 화면입니다. 완료 시 피드백과 연속 달성 기록을 보여줍니다.
 
-## 참고 자료
+### 계정 연결 (카카오 · Apple)
 
-- Expo 공식 문서: https://docs.expo.dev/
-- Expo Router (파일 기반 라우팅): https://docs.expo.dev/router/introduction/
-- TypeScript 가이드: https://docs.expo.dev/guides/typescript/
+<img src="[스크린샷 경로]" width="240"/>
+
+게스트로 쌓은 기록을 그대로 유지한 채, 카카오·Apple 계정을 연결해 여러 기기에서 이어서 사용할 수 있습니다. Refresh Token 기반 인증 구조로, 앱을 오래 켜두지 않아도 자동으로 로그인 상태가 유지됩니다.
+
+### 메모장
+
+<img src="[스크린샷 경로]" width="240"/>
+
+### 캘린더
+
+<img src="[스크린샷 경로]" width="240"/>
+
+날짜별로 완료 기록을 한눈에 확인할 수 있습니다.
+
+### 마이페이지 · 알림
+
+<img src="[스크린샷 경로]" width="240"/>
+
+계정 상태 확인, 알림 설정, 회원 탈퇴 등을 관리할 수 있습니다.
